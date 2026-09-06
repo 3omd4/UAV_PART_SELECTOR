@@ -362,7 +362,6 @@ with tab_builder:
         },
         use_container_width=True, hide_index=True
     )
-
 # ==========================================
 # TAB 3: ADMIN & PERSISTENCE
 # ==========================================
@@ -373,10 +372,13 @@ with tab_admin:
     if admin_pass == st.secrets.get("ADMIN_PASSWORD", "local_test_pass"):
         st.success("Admin access granted.")
         
+        # ------------------------------------------
+        # 1. ADD COMPONENT SECTION
+        # ------------------------------------------
         st.markdown("### Add New Component")
         st.caption("Select a category to reveal dedicated input cells for that component type.")
         
-        target_category = st.selectbox("Target Category:", CATEGORIES)
+        target_category = st.selectbox("Target Category for Addition:", CATEGORIES, key="add_cat")
         
         with st.form("add_part_form", clear_on_submit=False):
             # --- COMMON ATTRIBUTES ---
@@ -518,9 +520,35 @@ with tab_admin:
                     st.session_state[target_category][new_comp_name.strip()] = new_entry
                     st.success(f"Added '{new_comp_name.strip()}' to {target_category}!")
                     st.rerun()
+
+        # ------------------------------------------
+        # 2. REMOVE COMPONENT SECTION
+        # ------------------------------------------
+        st.markdown("---")
+        st.markdown("### Remove Existing Component")
+        st.caption("Select a category and choose a component to delete from the active database.")
+        
+        del_category = st.selectbox("Category to Delete From:", CATEGORIES, key="del_cat")
+        available_items = list(st.session_state[del_category].keys())
+        
+        if available_items:
+            del_c1, del_c2 = st.columns([3, 1], gap="small")
+            with del_c1:
+                item_to_delete = st.selectbox("Select Component to Remove:", available_items, label_visibility="collapsed")
+            with del_c2:
+                if st.button("🗑️ Delete Component", use_container_width=True):
+                    st.session_state[del_category].pop(item_to_delete, None)
+                    st.success(f"Removed '{item_to_delete}' from {del_category}.")
+                    st.rerun()
+        else:
+            st.info(f"No components found in {del_category}.")
                     
+        # ------------------------------------------
+        # 3. CLOUD REPOSITORY SYNC
+        # ------------------------------------------
         st.markdown("---")
         st.markdown("#### Cloud Repository Sync")
+        st.caption("Push additions or removals permanently to the JSON file on GitHub.")
         if st.button("🚀 Commit All Changes to GitHub Repository"):
             with st.spinner("Pushing database to GitHub..."):
                 full_catalog = {cat: st.session_state[cat] for cat in CATEGORIES}

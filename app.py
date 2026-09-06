@@ -74,22 +74,22 @@ tab_catalogs, tab_builder, tab_admin = st.tabs(["Component Catalogs", "Drone Bui
 # ==========================================
 with tab_catalogs:
     st.subheader("Component Technical Specifications & Cost Tables")
-    
+
     st.markdown("#### Single Board Computers (SBC)")
     st.dataframe(pd.DataFrame.from_dict(SBCS, orient="index"), column_config={"buy_url": st.column_config.LinkColumn("Where to Buy", display_text="Link ↗")}, use_container_width=True)
-    
+
     st.markdown("#### Integrated Autonomy Boards")
     st.dataframe(pd.DataFrame.from_dict(INTEGRATED_BOARDS, orient="index"), column_config={"buy_url": st.column_config.LinkColumn("Where to Buy", display_text="Link ↗")}, use_container_width=True)
-    
+
     st.markdown("#### Flight Controllers (FC)")
     st.dataframe(pd.DataFrame.from_dict(FLIGHT_CONTROLLERS, orient="index"), column_config={"buy_url": st.column_config.LinkColumn("Where to Buy", display_text="Link ↗")}, use_container_width=True)
-    
+
     st.markdown("#### Brushless DC Motors")
     st.dataframe(pd.DataFrame.from_dict(MOTORS, orient="index"), column_config={"buy_url": st.column_config.LinkColumn("Where to Buy", display_text="Link ↗")}, use_container_width=True)
-    
+
     st.markdown("#### Frame Kits")
     st.dataframe(pd.DataFrame.from_dict(FRAMES, orient="index"), column_config={"buy_url": st.column_config.LinkColumn("Where to Buy", display_text="Link ↗")}, use_container_width=True)
-    
+
     st.markdown("#### Battery Packs")
     st.dataframe(pd.DataFrame.from_dict(BATTERIES, orient="index"), column_config={"buy_url": st.column_config.LinkColumn("Where to Buy", display_text="Link ↗")}, use_container_width=True)
 
@@ -98,30 +98,30 @@ with tab_catalogs:
 # ==========================================
 with tab_builder:
     st.subheader("Configure Platform & Evaluate Compatibility")
-    
+
     col_cfg, col_results = st.columns([1.1, 1.2], gap="large")
-    
+
     # --- INPUTS (LEFT COLUMN) ---
     with col_cfg:
         st.markdown("#### 1. Airframe Selection")
         selected_frame_name = st.selectbox("Frame Architecture:", list(FRAMES.keys()), index=0)
         frame = FRAMES[selected_frame_name]
-        
+
         st.markdown("#### 2. Autonomy & Avionics Stack")
         arch_choice = st.radio("Avionics Architecture:", ["Modular (Separate FC + SBC)", "Integrated Board (All-in-One)"])
-        
+
         fc_weight, fc_price_egp, fc_price_usd = 0.0, 0.0, 0.0
         sbc_weight, sbc_price_egp, sbc_price_usd, sbc_power_w = 0.0, 0.0, 0.0, 0.0
         int_board_name = None
         fc_name = None
         sbc_name = None
-        
+
         if arch_choice == "Modular (Separate FC + SBC)":
             fc_name = st.selectbox("Flight Controller:", list(FLIGHT_CONTROLLERS.keys()), index=1)
             sbc_name = st.selectbox("Companion Computer (SBC):", list(SBCS.keys()), index=1)
             fc = FLIGHT_CONTROLLERS[fc_name]
             sbc = SBCS[sbc_name]
-            
+
             fc_weight, fc_price_egp, fc_price_usd = fc["weight"], fc["price_egp"], fc["price_usd"]
             sbc_weight, sbc_price_egp, sbc_price_usd, sbc_power_w = sbc["weight"], sbc["price_egp"], sbc["price_usd"], sbc["power_w"]
             ai_tops = sbc["ai_tops"]
@@ -134,11 +134,11 @@ with tab_builder:
         st.markdown("#### 3. Propulsion System")
         motor_name = st.selectbox("Brushless Motors:", list(MOTORS.keys()), index=2)
         motor = MOTORS[motor_name]
-        
+
         st.markdown("#### 4. Energy Storage")
         battery_name = st.selectbox("Battery Pack:", list(BATTERIES.keys()), index=0)
         battery = BATTERIES[battery_name]
-        
+
         st.markdown("#### 5. Mission Payload (Sensors & ESP32)")
         esp32_sniffer = st.checkbox("ESP32-S3 SDR Sniffer + Dual Antennas (~25g, 1.5W)", value=True)
         lidar_cam = st.selectbox("Perception Sensor:", [
@@ -147,7 +147,7 @@ with tab_builder:
             "Optical Flow + Downward ToF (~15g, 0.5W)",
             "None (Pre-mapped / Motion Capture Only) (0g, 0W)"
         ])
-        
+
         # Sensor payload math
         sensor_weight = 0.0
         sensor_power = 0.0
@@ -163,7 +163,7 @@ with tab_builder:
         elif "Optical" in lidar_cam:
             sensor_weight += 15.0
             sensor_power += 0.5
-            
+
         esc_wiring_weight = 40.0  # standard 4-in-1 ESC + wiring harness
 
     # --- COMPUTATIONS (Script level to be shared across columns) ---
@@ -171,26 +171,26 @@ with tab_builder:
     propulsion_weight = (motor["weight"] * num_motors) + esc_wiring_weight
     compute_and_fc_weight = fc_weight + sbc_weight
     total_payload_weight = compute_and_fc_weight + sensor_weight
-    
+
     # Safe weight handling if battery weight is null/None in data
     batt_weight = battery["weight_g"] if battery["weight_g"] is not None else 0.0
     batt_price_egp = battery["price_egp"] if battery["price_egp"] is not None else 0.0
     batt_price_usd = battery["price_usd"] if battery["price_usd"] is not None else 0.0
-    
+
     # All-Up Weight (AUW)
     auw_g = frame["weight_g"] + propulsion_weight + batt_weight + total_payload_weight
     auw_kg = auw_g / 1000.0
-    
+
     # Thrust and TWR
     total_max_thrust_g = motor["thrust"] * num_motors
     twr = total_max_thrust_g / auw_g if auw_g > 0 else 0.0
-    
+
     # Costs
     motor_total_cost_egp = motor["price_egp"] * num_motors
     motor_total_cost_usd = motor["price_usd"] * num_motors
     esc_cost_egp = 1500.0  # est 4-in-1 40A ESC
     esc_cost_usd = 30.0
-    
+
     total_cost_egp = frame["price_egp"] + motor_total_cost_egp + esc_cost_egp + fc_price_egp + sbc_price_egp + batt_price_egp
     total_cost_usd = frame["price_usd"] + motor_total_cost_usd + esc_cost_usd + fc_price_usd + sbc_price_usd + batt_price_usd
 
@@ -198,7 +198,7 @@ with tab_builder:
     hover_mech_power_w = auw_g / motor["efficiency_hover_gw"]
     total_elec_power_w = sbc_power_w + sensor_power + 3.0  # 3W FC/Receiver baseline
     total_hover_power_w = hover_mech_power_w + total_elec_power_w
-    
+
     usable_wh = battery["wh"] * 0.85
     flight_time_minutes = (usable_wh / total_hover_power_w) * 60.0
 
@@ -206,7 +206,7 @@ with tab_builder:
     with col_cfg:
         st.markdown("---")
         st.markdown("#### Power & Mass Breakdown")
-        
+
         b1, b2 = st.columns(2)
         with b1:
             st.markdown("**Mass Distribution:**")
@@ -215,7 +215,7 @@ with tab_builder:
             st.write(f"- Battery Pack: `{batt_weight:.1f} g`")
             st.write(f"- Compute & Avionics: `{compute_and_fc_weight:.1f} g`")
             st.write(f"- Sensors & RF Payload: `{sensor_weight:.1f} g`")
-            
+
         with b2:
             st.markdown("**Electrical Draw (Hover):**")
             st.write(f"- Motors (Mech): `{hover_mech_power_w:.1f} W`")
@@ -226,32 +226,32 @@ with tab_builder:
     # --- METRICS & RESULTS (RIGHT COLUMN) ---
     with col_results:
         st.markdown("### System Spec & Viability Assessment")
-        
+
         # Metrics display
         m1, m2, m3 = st.columns(3)
         m1.metric("All-Up Weight (AUW)", f"{auw_g:.1f} g", help="Includes frame, motors, ESC, battery, compute, sensors.")
         m2.metric("Thrust-to-Weight", f"{twr:.2f} : 1", delta="Optimal: 2.0 - 3.5" if 2.0 <= twr <= 3.8 else "Warning")
         m3.metric("Est. Hover Time", f"{flight_time_minutes:.1f} mins", help="Based on 85% battery discharge, electrical + mechanical draw.")
-        
+
         c1, c2, c3 = st.columns(3)
         c1.metric("Total Build Cost", f"{total_cost_egp:,.0f} EGP")
         c2.metric("Cost in USD", f"${total_cost_usd:,.1f}")
         c3.metric("AI Compute", f"{ai_tops} TOPS")
 
         st.markdown("---")
-        
+
         # --- PAYLOAD VISUALIZER ---
         st.markdown("#### Payload Capacity Limits")
-        
+
         # Structural Payload Limit
         payload_pct = min((total_payload_weight / frame["payload_limit_g"]), 1.0)
         st.caption(f"**Structural Payload Used:** {total_payload_weight:.1f}g out of {frame['payload_limit_g']}g frame limit")
         st.progress(payload_pct)
-        
+
         # Dynamic Payload Limit (Thrust constraint for TWR >= 2.0)
         max_safe_auw = total_max_thrust_g / 2.0
         remaining_thrust_payload_g = max_safe_auw - auw_g
-        
+
         col_p1, col_p2 = st.columns(2)
         col_p1.metric("Remaining Frame Payload", f"{max(0, frame['payload_limit_g'] - total_payload_weight):.1f} g", help="Maximum weight the carbon fiber/plastic frame can structurally support.")
         col_p2.metric("Remaining Safe Lift", f"{remaining_thrust_payload_g:.1f} g", help="Maximum weight you can add before the TWR drops below the safe 2.0 threshold required for indoor stability.")
@@ -269,30 +269,30 @@ with tab_builder:
             st.write(f"- **Integrated Avionics Size:** `{int_board['dim']}`")
 
         st.markdown("---")
-        
+
         # --- MATHEMATICAL BREAKDOWN EXPANDER ---
         with st.expander("View Step-by-Step Physics Calculations"):
             st.markdown("**1. All-Up Weight (AUW)**")
             st.latex(r"AUW = W_{frame} + (W_{motor} \times N) + W_{esc} + W_{batt} + W_{avionics} + W_{sensors}")
             st.markdown(f"AUW = {frame['weight_g']}g + ({motor['weight']}g × {num_motors}) + {esc_wiring_weight}g + {batt_weight}g + {compute_and_fc_weight}g + {sensor_weight}g = **{auw_g:.1f} g**")
-            
+
             st.markdown("**2. Thrust-to-Weight Ratio (TWR)**")
             st.latex(r"TWR = \frac{Thrust_{max} \times N}{AUW}")
             st.markdown(f"TWR = ({motor['thrust']}g × {num_motors}) / {auw_g:.1f}g = **{twr:.2f}**")
-            
+
             st.markdown("**3. Continuous Hover Power Draw**")
             st.latex(r"P_{hover} = \frac{AUW}{\eta_{motor}} + P_{avionics} + P_{sensors} + P_{misc}")
             st.markdown(f"P_hover = ({auw_g:.1f}g / {motor['efficiency_hover_gw']} g/W) + {sbc_power_w}W + {sensor_power}W + 3.0W = **{total_hover_power_w:.1f} W**")
-            
+
             st.markdown("**4. Estimated Flight Time**")
             st.latex(r"T_{flight} = \frac{E_{batt} \times 0.85}{P_{hover}} \times 60")
             st.markdown(f"Flight Time = ({battery['wh']} Wh × 0.85 / {total_hover_power_w:.1f} W) × 60 = **{flight_time_minutes:.1f} minutes**")
 
         st.markdown("#### Engineering & Safety Rules Verification")
-        
+
         # Validation checks
         checks_passed = True
-        
+
         if battery["cells"] not in motor["cells"]:
             st.error(f"❌ **Voltage Incompatibility:** Motor '{motor_name}' supports {motor['cells']}S, but battery is {battery['cells']}S. Motor will overheat or brown out.")
             checks_passed = False
@@ -317,7 +317,7 @@ with tab_builder:
             st.warning(f"⚠️ **Spatial Footprint Caution:** Wheelbase ({frame['wheelbase_mm']}mm) exceeds the 400mm strict indoor limit. Swarm collision and downwash risks are elevated.")
         else:
             st.success(f"✅ Dimensionally compliant ({frame['wheelbase_mm']}mm ≤ 400mm).")
-            
+
         if not frame["ducted"]:
             st.warning("⚠️ **Safety Hazard:** Open propellers selected. Wall strikes or mid-air node touches risk instant motor stalls and crashes.")
         else:
@@ -331,19 +331,19 @@ with tab_builder:
     # ==========================================
     st.markdown("---")
     st.markdown("### Selected Bill of Materials (BoM)")
-    
+
     bom_data = []
     bom_data.append({"Component": "Frame", "Model": selected_frame_name, "Weight (g)": frame["weight_g"], "Cost (EGP)": frame["price_egp"], "Where to Buy": frame["buy_url"]})
     bom_data.append({"Component": f"Motors (x{num_motors})", "Model": motor_name, "Weight (g)": motor["weight"] * num_motors, "Cost (EGP)": motor["price_egp"] * num_motors, "Where to Buy": motor["buy_url"]})
     bom_data.append({"Component": "ESC & Wiring", "Model": "4-in-1 40A ESC", "Weight (g)": esc_wiring_weight, "Cost (EGP)": esc_cost_egp, "Where to Buy": "https://makerselectronics.com"})
     bom_data.append({"Component": "Battery", "Model": battery_name, "Weight (g)": batt_weight, "Cost (EGP)": batt_price_egp, "Where to Buy": battery["buy_url"]})
-    
+
     if arch_choice == "Modular (Separate FC + SBC)":
         bom_data.append({"Component": "Flight Controller", "Model": fc_name, "Weight (g)": fc_weight, "Cost (EGP)": fc_price_egp, "Where to Buy": fc["buy_url"]})
         bom_data.append({"Component": "SBC", "Model": sbc_name, "Weight (g)": sbc_weight, "Cost (EGP)": sbc_price_egp, "Where to Buy": sbc["buy_url"]})
     else:
         bom_data.append({"Component": "Integrated Board", "Model": int_board_name, "Weight (g)": sbc_weight, "Cost (EGP)": sbc_price_egp, "Where to Buy": int_board["buy_url"]})
-        
+
     if esp32_sniffer:
         bom_data.append({"Component": "Payload Sensor", "Model": "ESP32-S3 SDR Sniffer", "Weight (g)": 25.0, "Cost (EGP)": 0.0, "Where to Buy": "https://makerselectronics.com"})
     if "LiDAR" in lidar_cam:
@@ -355,7 +355,7 @@ with tab_builder:
 
     df_bom = pd.DataFrame(bom_data)
     st.dataframe(
-        df_bom, 
+        df_bom,
         column_config={
             "Where to Buy": st.column_config.LinkColumn("Where to Buy", display_text="Link ↗"),
             "Cost (EGP)": st.column_config.NumberColumn(format="EGP %.2f")
@@ -367,7 +367,7 @@ with tab_builder:
 # ==========================================
 with tab_admin:
     st.subheader("Database Management")
-    
+
     # Check for pending notifications from a previous action and display them
     if "admin_notify" in st.session_state:
         if "⚠️" in st.session_state.admin_notify or "❌" in st.session_state.admin_notify:
@@ -377,165 +377,158 @@ with tab_admin:
         del st.session_state.admin_notify
 
     admin_pass = st.text_input("Enter Admin Password to unlock:", type="password")
-    
+
     if admin_pass == st.secrets.get("ADMIN_PASSWORD", "local_test_pass"):
         st.success("Admin access granted.")
-        
+
         # ------------------------------------------
         # 1. ADD COMPONENT SECTION
         # ------------------------------------------
         st.markdown("### Add New Component")
         st.caption("All fields marked with * are required.")
-        
+
         target_category = st.selectbox("Target Category for Addition:", CATEGORIES, key="add_cat")
-        
+
         with st.form("add_part_form", clear_on_submit=False):
-            # --- COMMON ATTRIBUTES ---
             st.markdown("**General Information**")
             row1_col1, row1_col2 = st.columns([2, 2])
             new_comp_name = row1_col1.text_input("Component Model Name*", value="", placeholder="e.g., T-Motor F1507")
             buy_url = row1_col2.text_input("Vendor / Purchase URL*", value="", placeholder="https://...")
-            
+
             row2_col1, row2_col2 = st.columns(2)
             price_egp = row2_col1.number_input("Price (EGP)*", min_value=0.0, value=None, step=50.0)
             price_usd = row2_col2.number_input("Price (USD)*", min_value=0.0, value=None, step=1.0)
-            
+
             st.markdown("---")
             st.markdown(f"**{target_category} Specifications**")
-            
             new_entry = {}
-            
-            # --- DYNAMIC CELLS PER CATEGORY ---
+
             if target_category == "MOTORS":
                 m_c1, m_c2, m_c3 = st.columns(3)
                 weight = m_c1.number_input("Weight (g)*", min_value=0.1, value=None, step=0.5)
                 thrust = m_c2.number_input("Max Thrust (g)*", min_value=1.0, value=None, step=10.0)
                 kv = m_c3.number_input("KV Rating*", min_value=100, value=None, step=50)
-                
+
                 m_c4, m_c5, m_c6 = st.columns(3)
                 stator = m_c4.text_input("Stator Size*", value="", placeholder="22 x 07 mm")
                 prop = m_c5.text_input("Supported Propeller Size*", value="", placeholder="5\"")
                 eff = m_c6.number_input("Hover Efficiency (g/W)*", min_value=1.0, value=None, step=0.1)
-                
+
                 m_c7, m_c8 = st.columns([2, 1])
                 source = m_c7.text_input("Source / Retailer Type*", value="", placeholder="Global / FPV shops")
                 cells = m_c8.multiselect("Supported Cell Counts (S)*", options=[1, 2, 3, 4, 5, 6, 8], default=[])
                 notes = st.text_input("Engineering Notes (Optional)", value="")
-                
+
                 new_entry = {
                     "stator": stator, "weight": weight, "kv": int(kv) if kv is not None else None, "cells": cells,
-                    "prop": prop, "thrust": thrust, "source": source,
-                    "price_egp": price_egp, "price_usd": price_usd,
+                    "prop": prop, "thrust": thrust, "source": source, "price_egp": price_egp, "price_usd": price_usd,
                     "efficiency_hover_gw": eff, "notes": notes, "buy_url": buy_url
                 }
-                
+
             elif target_category == "FRAMES":
                 f_c1, f_c2, f_c3 = st.columns(3)
                 wheelbase_mm = f_c1.number_input("Wheelbase (mm)*", min_value=50, value=None, step=10)
                 weight_g = f_c2.number_input("Bare Frame Weight (g)*", min_value=1.0, value=None, step=5.0)
                 payload_limit_g = f_c3.number_input("Max Structural Payload (g)*", min_value=10.0, value=None, step=10.0)
-                
+
                 f_c4, f_c5, f_c6 = st.columns(3)
                 motor_count = f_c4.number_input("Motor Count*", min_value=3, max_value=8, value=None, step=1)
                 max_prop = f_c5.text_input("Max Propeller Size*", value="", placeholder="5\"")
                 ducted = f_c6.checkbox("Enclosed / Ducted Props?", value=False)
                 notes = st.text_input("Engineering Notes (Optional)", value="")
-                
+
                 new_entry = {
                     "wheelbase_mm": int(wheelbase_mm) if wheelbase_mm is not None else None, "weight_g": weight_g,
                     "payload_limit_g": payload_limit_g, "motor_count": int(motor_count) if motor_count is not None else None,
-                    "max_prop": max_prop, "ducted": ducted,
-                    "price_egp": price_egp, "price_usd": price_usd,
+                    "max_prop": max_prop, "ducted": ducted, "price_egp": price_egp, "price_usd": price_usd,
                     "notes": notes, "buy_url": buy_url
                 }
-                
+
             elif target_category == "BATTERIES":
                 b_c1, b_c2, b_c3 = st.columns(3)
                 cells_count = b_c1.number_input("Cell Count (S)*", min_value=1, max_value=12, value=None, step=1)
                 mah = b_c2.number_input("Capacity (mAh)*", min_value=100, value=None, step=100)
                 voltage = b_c3.number_input("Nominal Voltage (V)*", min_value=1.0, value=None, step=0.1)
-                
+
                 b_c4, b_c5, b_c6 = st.columns(3)
                 weight_g = b_c4.number_input("Weight (g)*", min_value=1.0, value=None, step=5.0)
                 wh = b_c5.number_input("Watt-Hours (Wh)*", min_value=1.0, value=None, step=0.5)
                 c_rating = b_c6.number_input("C-Rating*", min_value=1, value=None, step=5)
-                
+
                 b_c7, b_c8 = st.columns(2)
                 dimensions = b_c7.text_input("Dimensions (L x W x H mm)*", value="", placeholder="100 × 35 × 25 mm")
                 notes = b_c8.text_input("Engineering Notes (Optional)", value="")
-                
+
                 new_entry = {
-                    "cells": int(cells_count) if cells_count is not None else None, "mah": int(mah) if mah is not None else None, 
-                    "weight_g": weight_g, "c_rating": int(c_rating) if c_rating is not None else None, 
+                    "cells": int(cells_count) if cells_count is not None else None, "mah": int(mah) if mah is not None else None,
+                    "weight_g": weight_g, "c_rating": int(c_rating) if c_rating is not None else None,
                     "voltage": voltage, "wh": wh, "price_egp": price_egp, "price_usd": price_usd,
                     "dimensions": dimensions, "notes": notes, "buy_url": buy_url
                 }
-                
+
             elif target_category == "FLIGHT_CONTROLLERS":
                 fc_c1, fc_c2 = st.columns(2)
                 mcu = fc_c1.text_input("MCU Model*", value="", placeholder="STM32H743")
                 weight = fc_c2.number_input("Weight (g)*", min_value=0.5, value=None, step=0.5)
-                
+
                 fc_c3, fc_c4 = st.columns(2)
                 dim = fc_c3.text_input("Dimensions (mm)*", value="", placeholder="36 x 36 x 5 mm")
                 firmware = fc_c4.text_input("Supported Firmware*", value="", placeholder="PX4, ArduPilot")
                 notes = st.text_input("Engineering Notes (Optional)", value="")
-                
+
                 new_entry = {
                     "mcu": mcu, "weight": weight, "dim": dim, "firmware": firmware,
-                    "price_egp": price_egp, "price_usd": price_usd,
-                    "notes": notes, "buy_url": buy_url
+                    "price_egp": price_egp, "price_usd": price_usd, "notes": notes, "buy_url": buy_url
                 }
-                
+
             elif target_category == "SBCS":
                 s_c1, s_c2, s_c3 = st.columns(3)
                 cpu = s_c1.text_input("Processor / Memory*", value="", placeholder="Quad-core ARM / 8GB")
                 ai_tops = s_c2.number_input("AI TOPS*", min_value=0.0, value=None, step=1.0)
                 power_w = s_c3.number_input("Average Power Draw (W)*", min_value=0.1, value=None, step=0.5)
-                
+
                 s_c4, s_c5 = st.columns(2)
                 weight = s_c4.number_input("Weight (g)*", min_value=1.0, value=None, step=1.0)
                 dim = s_c5.text_input("Dimensions (mm)*", value="", placeholder="85 x 56 x 15 mm")
                 best_for = st.text_input("Primary Workload / Best For*", value="", placeholder="ROS 2 SLAM Nodes")
-                
+
                 new_entry = {
                     "cpu": cpu, "ai_tops": ai_tops, "weight": weight, "dim": dim,
                     "power_w": power_w, "price_egp": price_egp, "price_usd": price_usd,
                     "best_for": best_for, "buy_url": buy_url
                 }
-                
+
             elif target_category == "INTEGRATED_BOARDS":
                 ib_c1, ib_c2 = st.columns(2)
                 arch = ib_c1.text_input("Architecture Type*", value="", placeholder="Unified Carrier")
                 compute = ib_c2.text_input("Onboard Compute Engine*", value="", placeholder="Jetson Orin")
-                
+
                 ib_c3, ib_c4, ib_c5 = st.columns(3)
                 weight = ib_c3.number_input("Weight (g)*", min_value=1.0, value=None, step=1.0)
                 power_w = ib_c4.number_input("Average Power Draw (W)*", min_value=0.5, value=None, step=0.5)
                 dim = ib_c5.text_input("Dimensions (mm)*", value="", placeholder="100 x 80 x 25 mm")
                 best_for = st.text_input("Primary Workload / Best For*", value="")
-                
+
                 new_entry = {
                     "arch": arch, "compute": compute, "dim": dim, "weight": weight,
                     "power_w": power_w, "price_egp": price_egp, "price_usd": price_usd,
                     "best_for": best_for, "buy_url": buy_url
                 }
-                
+
             submitted = st.form_submit_button("Add Component to Active Session")
-            
+
             if submitted:
-                # Validation Logic
                 missing_fields = []
                 if not new_comp_name.strip(): missing_fields.append("Component Model Name")
                 if not buy_url.strip(): missing_fields.append("Vendor URL")
                 if price_egp is None: missing_fields.append("Price (EGP)")
                 if price_usd is None: missing_fields.append("Price (USD)")
-                
+
                 for key, val in new_entry.items():
                     if key not in ["notes", "ducted"]:
                         if val is None or val == "" or val == []:
                             missing_fields.append(key.replace("_", " ").title())
-                
+
                 if missing_fields:
                     st.error(f"⚠️ **Validation Failed!** Please fill in the following required fields: {', '.join(missing_fields)}")
                 else:
@@ -544,15 +537,179 @@ with tab_admin:
                     st.rerun()
 
         # ------------------------------------------
-        # 2. REMOVE COMPONENT SECTION
+        # 2. EDIT COMPONENT SECTION
+        # ------------------------------------------
+        st.markdown("---")
+        st.markdown("### Edit Existing Component")
+        st.caption("Select a component to modify its properties.")
+
+        edit_category = st.selectbox("Category to Edit From:", CATEGORIES, key="edit_cat")
+        edit_available_items = list(st.session_state[edit_category].keys())
+
+        if edit_available_items:
+            item_to_edit = st.selectbox("Select Component to Edit:", edit_available_items, key="edit_item")
+            cur_data = st.session_state[edit_category][item_to_edit]
+
+            with st.form("edit_part_form", clear_on_submit=False):
+                st.markdown("**General Information**")
+                e_r1_c1, e_r1_c2 = st.columns([2, 2])
+                edit_comp_name = e_r1_c1.text_input("Component Model Name*", value=item_to_edit)
+                edit_url = e_r1_c2.text_input("Vendor / Purchase URL*", value=cur_data.get("buy_url", ""))
+
+                e_r2_c1, e_r2_c2 = st.columns(2)
+                edit_price_egp = e_r2_c1.number_input("Price (EGP)*", min_value=0.0, value=float(cur_data.get("price_egp", 0.0)), step=50.0)
+                edit_price_usd = e_r2_c2.number_input("Price (USD)*", min_value=0.0, value=float(cur_data.get("price_usd", 0.0)), step=1.0)
+
+                st.markdown("---")
+                st.markdown(f"**{edit_category} Specifications**")
+                edit_entry = {}
+
+                if edit_category == "MOTORS":
+                    em_c1, em_c2, em_c3 = st.columns(3)
+                    e_weight = em_c1.number_input("Weight (g)*", min_value=0.1, value=float(cur_data.get("weight", 30.0)), step=0.5)
+                    e_thrust = em_c2.number_input("Max Thrust (g)*", min_value=1.0, value=float(cur_data.get("thrust", 1200.0)), step=10.0)
+                    e_kv = em_c3.number_input("KV Rating*", min_value=100, value=int(cur_data.get("kv", 1800)), step=50)
+
+                    em_c4, em_c5, em_c6 = st.columns(3)
+                    e_stator = em_c4.text_input("Stator Size*", value=cur_data.get("stator", ""))
+                    e_prop = em_c5.text_input("Supported Propeller Size*", value=cur_data.get("prop", ""))
+                    e_eff = em_c6.number_input("Hover Efficiency (g/W)*", min_value=1.0, value=float(cur_data.get("efficiency_hover_gw", 7.0)), step=0.1)
+
+                    em_c7, em_c8 = st.columns([2, 1])
+                    e_source = em_c7.text_input("Source / Retailer Type*", value=cur_data.get("source", ""))
+                    e_cells = em_c8.multiselect("Supported Cell Counts (S)*", options=[1, 2, 3, 4, 5, 6, 8], default=cur_data.get("cells", []))
+                    e_notes = st.text_input("Engineering Notes (Optional)", value=cur_data.get("notes", ""))
+
+                    edit_entry = {
+                        "stator": e_stator, "weight": e_weight, "kv": int(e_kv), "cells": e_cells,
+                        "prop": e_prop, "thrust": e_thrust, "source": e_source, "price_egp": edit_price_egp,
+                        "price_usd": edit_price_usd, "efficiency_hover_gw": e_eff, "notes": e_notes, "buy_url": edit_url
+                    }
+
+                elif edit_category == "FRAMES":
+                    ef_c1, ef_c2, ef_c3 = st.columns(3)
+                    e_wheelbase_mm = ef_c1.number_input("Wheelbase (mm)*", min_value=50, value=int(cur_data.get("wheelbase_mm", 330)), step=10)
+                    e_weight_g = ef_c2.number_input("Bare Frame Weight (g)*", min_value=1.0, value=float(cur_data.get("weight_g", 150.0)), step=5.0)
+                    e_payload_limit_g = ef_c3.number_input("Max Structural Payload (g)*", min_value=10.0, value=float(cur_data.get("payload_limit_g", 400.0)), step=10.0)
+
+                    ef_c4, ef_c5, ef_c6 = st.columns(3)
+                    e_motor_count = ef_c4.number_input("Motor Count*", min_value=3, max_value=8, value=int(cur_data.get("motor_count", 4)), step=1)
+                    e_max_prop = ef_c5.text_input("Max Propeller Size*", value=cur_data.get("max_prop", ""))
+                    e_ducted = ef_c6.checkbox("Enclosed / Ducted Props?", value=bool(cur_data.get("ducted", False)))
+                    e_notes = st.text_input("Engineering Notes (Optional)", value=cur_data.get("notes", ""))
+
+                    edit_entry = {
+                        "wheelbase_mm": int(e_wheelbase_mm), "weight_g": e_weight_g, "payload_limit_g": e_payload_limit_g,
+                        "motor_count": int(e_motor_count), "max_prop": e_max_prop, "ducted": e_ducted,
+                        "price_egp": edit_price_egp, "price_usd": edit_price_usd, "notes": e_notes, "buy_url": edit_url
+                    }
+
+                elif edit_category == "BATTERIES":
+                    eb_c1, eb_c2, eb_c3 = st.columns(3)
+                    e_cells_count = eb_c1.number_input("Cell Count (S)*", min_value=1, max_value=12, value=int(cur_data.get("cells", 4)), step=1)
+                    e_mah = eb_c2.number_input("Capacity (mAh)*", min_value=100, value=int(cur_data.get("mah", 4000)), step=100)
+                    e_voltage = eb_c3.number_input("Nominal Voltage (V)*", min_value=1.0, value=float(cur_data.get("voltage", 14.8)), step=0.1)
+
+                    eb_c4, eb_c5, eb_c6 = st.columns(3)
+                    e_batt_weight_g = eb_c4.number_input("Weight (g)*", min_value=1.0, value=float(cur_data.get("weight_g", 250.0) or 250.0), step=5.0)
+                    e_wh = eb_c5.number_input("Watt-Hours (Wh)*", min_value=1.0, value=float(cur_data.get("wh", 50.0)), step=0.5)
+                    e_c_rating = eb_c6.number_input("C-Rating*", min_value=1, value=int(cur_data.get("c_rating", 40)), step=5)
+
+                    eb_c7, eb_c8 = st.columns(2)
+                    e_dimensions = eb_c7.text_input("Dimensions (L x W x H mm)*", value=cur_data.get("dimensions", ""))
+                    e_notes = eb_c8.text_input("Engineering Notes (Optional)", value=cur_data.get("notes", ""))
+
+                    edit_entry = {
+                        "cells": int(e_cells_count), "mah": int(e_mah), "weight_g": e_batt_weight_g,
+                        "c_rating": int(e_c_rating), "voltage": e_voltage, "wh": e_wh,
+                        "price_egp": edit_price_egp, "price_usd": edit_price_usd,
+                        "dimensions": e_dimensions, "notes": e_notes, "buy_url": edit_url
+                    }
+
+                elif edit_category == "FLIGHT_CONTROLLERS":
+                    efc_c1, efc_c2 = st.columns(2)
+                    e_mcu = efc_c1.text_input("MCU Model*", value=cur_data.get("mcu", ""))
+                    e_fc_weight = efc_c2.number_input("Weight (g)*", min_value=0.5, value=float(cur_data.get("weight", 10.0)), step=0.5)
+
+                    efc_c3, efc_c4 = st.columns(2)
+                    e_dim = efc_c3.text_input("Dimensions (mm)*", value=cur_data.get("dim", ""))
+                    e_firmware = efc_c4.text_input("Supported Firmware*", value=cur_data.get("firmware", ""))
+                    e_notes = st.text_input("Engineering Notes (Optional)", value=cur_data.get("notes", ""))
+
+                    edit_entry = {
+                        "mcu": e_mcu, "weight": e_fc_weight, "dim": e_dim, "firmware": e_firmware,
+                        "price_egp": edit_price_egp, "price_usd": edit_price_usd, "notes": e_notes, "buy_url": edit_url
+                    }
+
+                elif edit_category == "SBCS":
+                    es_c1, es_c2, es_c3 = st.columns(3)
+                    e_cpu = es_c1.text_input("Processor / Memory*", value=cur_data.get("cpu", ""))
+                    e_ai_tops = es_c2.number_input("AI TOPS*", min_value=0.0, value=float(cur_data.get("ai_tops", 0.0)), step=1.0)
+                    e_power_w = es_c3.number_input("Average Power Draw (W)*", min_value=0.1, value=float(cur_data.get("power_w", 5.0)), step=0.5)
+
+                    es_c4, es_c5 = st.columns(2)
+                    e_sbc_weight = es_c4.number_input("Weight (g)*", min_value=1.0, value=float(cur_data.get("weight", 45.0)), step=1.0)
+                    e_dim = es_c5.text_input("Dimensions (mm)*", value=cur_data.get("dim", ""))
+                    e_best_for = st.text_input("Primary Workload / Best For*", value=cur_data.get("best_for", ""))
+
+                    edit_entry = {
+                        "cpu": e_cpu, "ai_tops": e_ai_tops, "weight": e_sbc_weight, "dim": e_dim,
+                        "power_w": e_power_w, "price_egp": edit_price_egp, "price_usd": edit_price_usd,
+                        "best_for": e_best_for, "buy_url": edit_url
+                    }
+
+                elif edit_category == "INTEGRATED_BOARDS":
+                    eib_c1, eib_c2 = st.columns(2)
+                    e_arch = eib_c1.text_input("Architecture Type*", value=cur_data.get("arch", ""))
+                    e_compute = eib_c2.text_input("Onboard Compute Engine*", value=cur_data.get("compute", ""))
+
+                    eib_c3, eib_c4, eib_c5 = st.columns(3)
+                    e_ib_weight = eib_c3.number_input("Weight (g)*", min_value=1.0, value=float(cur_data.get("weight", 100.0)), step=1.0)
+                    e_ib_power_w = eib_c4.number_input("Average Power Draw (W)*", min_value=0.5, value=float(cur_data.get("power_w", 10.0)), step=0.5)
+                    e_dim = eib_c5.text_input("Dimensions (mm)*", value=cur_data.get("dim", ""))
+                    e_best_for = st.text_input("Primary Workload / Best For*", value=cur_data.get("best_for", ""))
+
+                    edit_entry = {
+                        "arch": e_arch, "compute": e_compute, "dim": e_dim, "weight": e_ib_weight,
+                        "power_w": e_ib_power_w, "price_egp": edit_price_egp, "price_usd": edit_price_usd,
+                        "best_for": e_best_for, "buy_url": edit_url
+                    }
+
+                edit_submitted = st.form_submit_button("Save Changes to Active Session")
+
+                if edit_submitted:
+                    missing_fields = []
+                    if not edit_comp_name.strip(): missing_fields.append("Component Model Name")
+                    if not edit_url.strip(): missing_fields.append("Vendor URL")
+
+                    for key, val in edit_entry.items():
+                        if key not in ["notes", "ducted"]:
+                            if val is None or val == "" or val == []:
+                                missing_fields.append(key.replace("_", " ").title())
+
+                    if missing_fields:
+                        st.error(f"⚠️ **Validation Failed!** Please fill in: {', '.join(missing_fields)}")
+                    else:
+                        clean_name = edit_comp_name.strip()
+                        # If the name was changed, delete the old key so we don't create a duplicate
+                        if clean_name != item_to_edit:
+                            st.session_state[edit_category].pop(item_to_edit, None)
+                        st.session_state[edit_category][clean_name] = edit_entry
+                        st.session_state.admin_notify = f"✅ Updated '{clean_name}' successfully!"
+                        st.rerun()
+        else:
+            st.info(f"No components available to edit in {edit_category}.")
+
+        # ------------------------------------------
+        # 3. REMOVE COMPONENT SECTION
         # ------------------------------------------
         st.markdown("---")
         st.markdown("### Remove Existing Component")
         st.caption("Select a category and choose a component to delete from the active database.")
-        
+
         del_category = st.selectbox("Category to Delete From:", CATEGORIES, key="del_cat")
         available_items = list(st.session_state[del_category].keys())
-        
+
         if available_items:
             del_c1, del_c2 = st.columns([3, 1], gap="small")
             with del_c1:
@@ -564,13 +721,13 @@ with tab_admin:
                     st.rerun()
         else:
             st.info(f"No components found in {del_category}.")
-                    
+
         # ------------------------------------------
-        # 3. CLOUD REPOSITORY SYNC
+        # 4. CLOUD REPOSITORY SYNC
         # ------------------------------------------
         st.markdown("---")
         st.markdown("#### Cloud Repository Sync")
-        st.caption("Push additions or removals permanently to the JSON file on GitHub.")
+        st.caption("Push additions, edits, or removals permanently to the JSON file on GitHub.")
         if st.button("🚀 Commit All Changes to GitHub Repository"):
             with st.spinner("Pushing database to GitHub..."):
                 full_catalog = {cat: st.session_state[cat] for cat in CATEGORIES}

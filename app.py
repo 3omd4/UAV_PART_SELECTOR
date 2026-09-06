@@ -374,31 +374,153 @@ with tab_admin:
         st.success("Admin access granted.")
         
         st.markdown("### Add New Component")
-        st.caption("Select a category, modify the JSON template below, and add it to the live session.")
+        st.caption("Select a category to reveal dedicated input cells for that component type.")
         
-        target_category = st.selectbox("Target Category", CATEGORIES)
-        new_comp_name = st.text_input("New Component Name (e.g., T-Motor F1507)")
+        target_category = st.selectbox("Target Category:", CATEGORIES)
         
-        sample_key = list(st.session_state[target_category].keys())[0] if st.session_state[target_category] else None
-        sample_data = st.session_state[target_category][sample_key] if sample_key else {}
-        template = json.dumps(sample_data, indent=4)
-        
-        new_comp_json = st.text_area("Component Configuration (JSON format)", value=template, height=280)
-        
-        if st.button("Add to Local Session"):
-            if new_comp_name.strip():
-                try:
-                    parsed_data = json.loads(new_comp_json)
-                    st.session_state[target_category][new_comp_name] = parsed_data
-                    st.success(f"Successfully loaded '{new_comp_name}' into {target_category}!")
-                    st.rerun()
-                except json.JSONDecodeError:
-                    st.error("Invalid JSON format. Check for missing quotes or commas.")
-            else:
-                st.warning("Please specify a component name.")
+        with st.form("add_part_form", clear_on_submit=False):
+            # --- COMMON ATTRIBUTES ---
+            st.markdown("**General Information**")
+            row1_col1, row1_col2 = st.columns([2, 2])
+            new_comp_name = row1_col1.text_input("Component Model Name*", placeholder="e.g., T-Motor F1507")
+            buy_url = row1_col2.text_input("Vendor / Purchase URL*", value="https://")
+            
+            row2_col1, row2_col2 = st.columns(2)
+            price_egp = row2_col1.number_input("Price (EGP)", min_value=0.0, value=1000.0, step=50.0)
+            price_usd = row2_col2.number_input("Price (USD)", min_value=0.0, value=20.0, step=1.0)
+            
+            st.markdown("---")
+            st.markdown(f"**{target_category} Specifications**")
+            
+            new_entry = {}
+            
+            # --- DYNAMIC CELLS PER CATEGORY ---
+            if target_category == "MOTORS":
+                m_c1, m_c2, m_c3 = st.columns(3)
+                weight = m_c1.number_input("Weight (g)*", min_value=0.1, value=30.0, step=0.5)
+                thrust = m_c2.number_input("Max Thrust (g)*", min_value=1.0, value=1200.0, step=10.0)
+                kv = m_c3.number_input("KV Rating*", min_value=100, value=1800, step=50)
                 
+                m_c4, m_c5, m_c6 = st.columns(3)
+                stator = m_c4.text_input("Stator Size", value="22 x 07 mm")
+                prop = m_c5.text_input("Supported Propeller Size", value='5"')
+                eff = m_c6.number_input("Hover Efficiency (g/W)*", min_value=1.0, value=7.0, step=0.1)
+                
+                m_c7, m_c8 = st.columns([2, 1])
+                source = m_c7.text_input("Source / Retailer Type", value="Global / FPV shops")
+                cells = m_c8.multiselect("Supported Cell Counts (S)*", options=[1, 2, 3, 4, 5, 6, 8], default=[4, 6])
+                notes = st.text_input("Engineering Notes", value="Suitable for sub-400mm frames.")
+                
+                new_entry = {
+                    "stator": stator, "weight": weight, "kv": kv, "cells": cells,
+                    "prop": prop, "thrust": thrust, "source": source,
+                    "price_egp": price_egp, "price_usd": price_usd,
+                    "efficiency_hover_gw": eff, "notes": notes, "buy_url": buy_url
+                }
+                
+            elif target_category == "FRAMES":
+                f_c1, f_c2, f_c3 = st.columns(3)
+                wheelbase_mm = f_c1.number_input("Wheelbase (mm)*", min_value=50, value=330, step=10)
+                weight_g = f_c2.number_input("Bare Frame Weight (g)*", min_value=1.0, value=150.0, step=5.0)
+                payload_limit_g = f_c3.number_input("Max Structural Payload (g)*", min_value=10.0, value=400.0, step=10.0)
+                
+                f_c4, f_c5, f_c6 = st.columns(3)
+                motor_count = f_c4.number_input("Motor Count*", min_value=3, max_value=8, value=4, step=1)
+                max_prop = f_c5.text_input("Max Propeller Size*", value='5"')
+                ducted = f_c6.checkbox("Enclosed / Ducted Props?", value=True)
+                notes = st.text_input("Engineering Notes", value="Indoor swarm evaluation frame.")
+                
+                new_entry = {
+                    "wheelbase_mm": int(wheelbase_mm), "weight_g": weight_g,
+                    "payload_limit_g": payload_limit_g, "motor_count": int(motor_count),
+                    "max_prop": max_prop, "ducted": ducted,
+                    "price_egp": price_egp, "price_usd": price_usd,
+                    "notes": notes, "buy_url": buy_url
+                }
+                
+            elif target_category == "BATTERIES":
+                b_c1, b_c2, b_c3 = st.columns(3)
+                cells_count = b_c1.number_input("Cell Count (S)*", min_value=1, max_value=12, value=4, step=1)
+                mah = b_c2.number_input("Capacity (mAh)*", min_value=100, value=4000, step=100)
+                voltage = b_c3.number_input("Nominal Voltage (V)*", min_value=1.0, value=14.8, step=0.1)
+                
+                b_c4, b_c5, b_c6 = st.columns(3)
+                weight_g = b_c4.number_input("Weight (g)*", min_value=1.0, value=250.0, step=5.0)
+                wh = b_c5.number_input("Watt-Hours (Wh)*", min_value=1.0, value=round((mah * voltage) / 1000.0, 1), step=0.5)
+                c_rating = b_c6.number_input("C-Rating*", min_value=1, value=40, step=5)
+                
+                b_c7, b_c8 = st.columns(2)
+                dimensions = b_c7.text_input("Dimensions (L x W x H mm)", value="100 × 35 × 25 mm")
+                notes = b_c8.text_input("Engineering Notes", value="Low internal resistance pack.")
+                
+                new_entry = {
+                    "cells": int(cells_count), "mah": int(mah), "weight_g": weight_g,
+                    "c_rating": int(c_rating), "voltage": voltage, "wh": wh,
+                    "price_egp": price_egp, "price_usd": price_usd,
+                    "dimensions": dimensions, "notes": notes, "buy_url": buy_url
+                }
+                
+            elif target_category == "FLIGHT_CONTROLLERS":
+                fc_c1, fc_c2 = st.columns(2)
+                mcu = fc_c1.text_input("MCU Model*", value="STM32H743")
+                weight = fc_c2.number_input("Weight (g)*", min_value=0.5, value=10.0, step=0.5)
+                
+                fc_c3, fc_c4 = st.columns(2)
+                dim = fc_c3.text_input("Dimensions (mm)*", value="36 x 36 x 5 mm")
+                firmware = fc_c4.text_input("Supported Firmware*", value="PX4, ArduPilot")
+                notes = st.text_input("Engineering Notes", value="Integrated IMU redundancy.")
+                
+                new_entry = {
+                    "mcu": mcu, "weight": weight, "dim": dim, "firmware": firmware,
+                    "price_egp": price_egp, "price_usd": price_usd,
+                    "notes": notes, "buy_url": buy_url
+                }
+                
+            elif target_category == "SBCS":
+                s_c1, s_c2, s_c3 = st.columns(3)
+                cpu = s_c1.text_input("Processor / Memory*", value="Quad-core ARM / 8GB")
+                ai_tops = s_c2.number_input("AI TOPS*", min_value=0.0, value=0.0, step=1.0)
+                power_w = s_c3.number_input("Average Power Draw (W)*", min_value=0.5, value=8.0, step=0.5)
+                
+                s_c4, s_c5 = st.columns(2)
+                weight = s_c4.number_input("Weight (g)*", min_value=1.0, value=45.0, step=1.0)
+                dim = s_c5.text_input("Dimensions (mm)*", value="85 x 56 x 15 mm")
+                best_for = st.text_input("Primary Workload / Best For*", value="ROS 2 decentralized nodes.")
+                
+                new_entry = {
+                    "cpu": cpu, "ai_tops": ai_tops, "weight": weight, "dim": dim,
+                    "power_w": power_w, "price_egp": price_egp, "price_usd": price_usd,
+                    "best_for": best_for, "buy_url": buy_url
+                }
+                
+            elif target_category == "INTEGRATED_BOARDS":
+                ib_c1, ib_c2 = st.columns(2)
+                arch = ib_c1.text_input("Architecture Type*", value="Unified Carrier")
+                compute = ib_c2.text_input("Onboard Compute Engine*", value="Jetson Orin / STM32")
+                
+                ib_c3, ib_c4, ib_c5 = st.columns(3)
+                weight = ib_c3.number_input("Weight (g)*", min_value=1.0, value=150.0, step=1.0)
+                power_w = ib_c4.number_input("Average Power Draw (W)*", min_value=0.5, value=15.0, step=0.5)
+                dim = ib_c5.text_input("Dimensions (mm)*", value="100 x 80 x 25 mm")
+                best_for = st.text_input("Primary Workload / Best For*", value="All-in-one vision and flight control.")
+                
+                new_entry = {
+                    "arch": arch, "compute": compute, "dim": dim, "weight": weight,
+                    "power_w": power_w, "price_egp": price_egp, "price_usd": price_usd,
+                    "best_for": best_for, "buy_url": buy_url
+                }
+                
+            submitted = st.form_submit_button("Add Component to Active Session")
+            if submitted:
+                if not new_comp_name.strip():
+                    st.error("Component Model Name cannot be empty.")
+                else:
+                    st.session_state[target_category][new_comp_name.strip()] = new_entry
+                    st.success(f"Added '{new_comp_name.strip()}' to {target_category}!")
+                    st.rerun()
+                    
         st.markdown("---")
-        
+        st.markdown("#### Cloud Repository Sync")
         if st.button("🚀 Commit All Changes to GitHub Repository"):
             with st.spinner("Pushing database to GitHub..."):
                 full_catalog = {cat: st.session_state[cat] for cat in CATEGORIES}

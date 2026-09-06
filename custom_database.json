@@ -496,19 +496,6 @@
       "dimensions": "186 \u00d7 65 \u00d7 55 mm",
       "notes": "Heavy endurance pack for large platforms.",
       "buy_url": "https://circuits-elec.com/products/lithium-polymer-battery-11-1-v-10400-mah-40c-pre-ordered"
-    },
-    "new battery": {
-      "cells": 6,
-      "mah": 1200,
-      "weight_g": 12.0,
-      "c_rating": 3,
-      "voltage": 1.5,
-      "wh": 3000.0,
-      "price_egp": 1000.0,
-      "price_usd": 20.0,
-      "dimensions": "5X5",
-      "notes": "NA",
-      "buy_url": "https://betafpv.com/products/lava-series-2006-brushless-motors"
     }
   }
 }

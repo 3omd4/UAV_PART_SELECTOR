@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import json
+import base64
+import requests
 
 st.set_page_config(
     page_title="Indoor UAV Part list",
@@ -9,372 +12,62 @@ st.set_page_config(
 )
 
 # ==========================================
-# 1. COMPONENT DATABASE DEFINITIONS
+# 1. DATABASE & SESSION INITIALIZATION
 # ==========================================
 
-MOTORS = {
-    "XXD A2212 (1000KV)": {
-        "stator": "22 x 12 mm", "weight": 48.0, "kv": 1000, "cells": [3, 4],
-        "prop": "8\"–10\"", "thrust": 900.0, "source": "Local (Makers/RAM)",
-        "price_egp": 430.0, "price_usd": 8.5, "efficiency_hover_gw": 8.0,
-        "notes": "Large open frames only; high downwash indoors.",
-        "buy_url": "https://microohm-eg.com/a2212-6t-2200kv-brushless-motor-for-drone/"
-    },
-    "Holybro 2216 (920KV)": {
-        "stator": "22 x 16 mm", "weight": 54.0, "kv": 920, "cells": [4],
-        "prop": "9\"–10\"", "thrust": 1050.0, "source": "Global / Kit",
-        "price_egp": 1182.83, "price_usd": 23.2, "efficiency_hover_gw": 8.5,
-        "notes": "Standard X500 kit motor; too large for tight swarms.",
-        "buy_url": "https://ar.aliexpress.com/item/1005004562567395.html"
-    },
-    "EMAX ECO II 2207 (1700KV)": {
-        "stator": "22 x 7 mm", "weight": 33.0, "kv": 1700, "cells": [4, 5, 6],
-        "prop": "5\"", "thrust": 1500.0, "source": "Global / FPV shops",
-        "price_egp": 1199.00, "price_usd": 23.5, "efficiency_hover_gw": 6.8,
-        "notes": "Top pick for 330mm custom ducted frame lifting SBC.",
-        "buy_url": "https://www.fruugo.eg/emax-eco-ii-2207-1700kv-brushless-motor-drone-multirotor-cw-motor-3-6s-for-rc-fpv-racing-drone/p-463531857-975406632"
-    },
-    "T-Motor F2203.5 (1500KV)": {
-        "stator": "22 x 3.5 mm", "weight": 19.7, "kv": 1500, "cells": [4, 5, 6],
-        "prop": "4\"–5\"", "thrust": 875.0, "source": "Global (Specialized RC)",
-        "price_egp": 936.95, "price_usd": 18.4, "efficiency_hover_gw": 7.5,
-        "notes": "High efficiency pick for lightweight micro-heavy lifters.",
-        "buy_url": "https://ar.aliexpress.com/item/1005007986142505.html"
-    },
-    "BrotherHobby Avenger 2004 (1700KV)": {
-        "stator": "20 x 4 mm", "weight": 16.6, "kv": 1700, "cells": [4],
-        "prop": "4\"", "thrust": 700.0, "source": "Global (Specialized FPV)",
-        "price_egp": 1300.86, "price_usd": 25.5, "efficiency_hover_gw": 7.0,
-        "notes": "Compact 4-inch frames; payload must stay under 250g.",
-        "buy_url": "https://ar.aliexpress.com/item/1005010804220626.html"
-    },
-    "GEPRC SPEEDX2 2105.5 (2650KV)": {
-        "stator": "21 x 5.5 mm", "weight": 21.0, "kv": 2650, "cells": [4, 6],
-        "prop": "3.5\"", "thrust": 800.0, "source": "Global (GEPRC/Banggood)",
-        "price_egp": 988.03, "price_usd": 19.4, "efficiency_hover_gw": 5.2,
-        "notes": "Standard CineLog35 motor; high RPM draw cuts endurance.",
-        "buy_url": "https://ar.aliexpress.com/item/1005009435278291.html"
-    },
-    "iFlight XING2 1404 (3800KV)": {
-        "stator": "14 x 4 mm", "weight": 9.1, "kv": 3800, "cells": [3, 4],
-        "prop": "2.5\"–3.5\"", "thrust": 385.0, "source": "Global (iFlight/AliExpress)",
-        "price_egp": 631.83, "price_usd": 12.4, "efficiency_hover_gw": 5.0,
-        "notes": "Too weak to lift an SBC or LiDAR payload.",
-        "buy_url": "https://ar.aliexpress.com/item/1005002346308981.html"
-    }
-}
+CATEGORIES = ["MOTORS", "FLIGHT_CONTROLLERS", "SBCS", "INTEGRATED_BOARDS", "FRAMES", "BATTERIES"]
 
-FLIGHT_CONTROLLERS = {
-    "Holybro Pixhawk 6C Mini": {
-        "mcu": "STM32H743", "weight": 39.0, "dim": "53.3 x 39 x 16.2 mm",
-        "firmware": "PX4, ArduPilot", "price_egp": 11073.91, "price_usd": 150.0,
-        "notes": "Full aluminum case, dual IMU redundancy.",
-        "buy_url": "https://holybro.com/"
-    },
-    "Matek H743-SLIM V3": {
-        "mcu": "STM32H743VIH6", "weight": 7.0, "dim": "36 x 36 x 5 mm",
-        "firmware": "ArduPilot, BetaFlight", "price_egp": 3435.92, "price_usd": 115.0,
-        "notes": "Ultra-lightweight bare-PCB, dual IMUs.",
-        "buy_url": "https://ardupilot.org/"
-    },
-    "Holybro Kakute H7 Mini": {
-        "mcu": "STM32H743", "weight": 5.1, "dim": "29 x 29 mm",
-        "firmware": "ArduPilot, BetaFlight", "price_egp": 3293.61, "price_usd": 75.0,
-        "notes": "Compact 20x20mm mounting for small whoops.",
-        "buy_url": "https://holybro.com/"
-    },
-    "CUAV Nora+": {
-        "mcu": "STM32H743", "weight": 48.0, "dim": "60 x 38.8 x 17.5 mm",
-        "firmware": "PX4, ArduPilot", "price_egp": 30305.72, "price_usd": 260.0,
-        "notes": "Triple redundant IMU; heavy and expensive.",
-        "buy_url": "https://store.cuav.net/"
-    }
-}
+# Load permanent component database from JSON file
+try:
+    with open("custom_database.json", "r", encoding="utf-8") as f:
+        db_from_file = json.load(f)
+except Exception:
+    db_from_file = {}
 
-SBCS = {
-    "NVIDIA Jetson Orin Nano (SOM + Carrier)": {
-        "cpu": "6-core ARM / 8GB", "ai_tops": 40.0, "weight": 75.0, "dim": "100 x 79 x 25 mm",
-        "power_w": 12.0, "price_egp": 35000.0, "price_usd": 449.0,
-        "best_for": "Heavy visual SLAM & deep learning.",
-        "buy_url": "https://www.nvidia.com/"
-    },
-    "Khadas Edge2 (Maker Kit)": {
-        "cpu": "8-core RK3588S / 8GB", "ai_tops": 6.0, "weight": 25.0, "dim": "82 x 57.5 x 5.7 mm",
-        "power_w": 7.5, "price_egp": 21837.0, "price_usd": 199.0,
-        "best_for": "Balanced edge AI & low-profile mounting.",
-        "buy_url": "https://www.khadas.com/"
-    },
-    "Raspberry Pi 5 (8GB)": {
-        "cpu": "Quad-core BCM2712", "ai_tops": 0.0, "weight": 46.0, "dim": "85 x 56 x 15 mm",
-        "power_w": 8.0, "price_egp": 14000.0, "price_usd": 80.0,
-        "best_for": "Ubiquitous ROS 2 nodes, 2D LiDAR SLAM.",
-        "buy_url": "https://www.raspberrypi.com/"
-    },
-    "Radxa Zero 3W": {
-        "cpu": "Quad-core RK3566", "ai_tops": 1.0, "weight": 9.0, "dim": "65 x 30 x 5 mm",
-        "power_w": 3.0, "price_egp": 4240.0, "price_usd": 25.0,
-        "best_for": "Minimalist weight budget; ESP32 mesh router.",
-        "buy_url": "https://radxa.com/"
-    }
-}
+# Initialize session state for each catalog category
+for cat in CATEGORIES:
+    if cat not in st.session_state:
+        st.session_state[cat] = db_from_file.get(cat, {})
 
-INTEGRATED_BOARDS = {
-    "ModalAI VOXL 2 Mini": {
-        "arch": "True All-in-One (DSP PX4)", "compute": "Qualcomm QRB5165", "dim": "50 x 50 x 15 mm",
-        "weight": 11.0, "power_w": 5.0, "price_egp": 63699.0, "price_usd": 1249.0,
-        "best_for": "Extreme weight limits; professional edge AI.",
-        "buy_url": "https://www.modalai.com/"
-    },
-    "ModalAI VOXL 2": {
-        "arch": "True All-in-One (DSP PX4)", "compute": "Qualcomm QRB5165", "dim": "70 x 70 x 15 mm",
-        "weight": 16.0, "power_w": 6.0, "price_egp": 66249.0, "price_usd": 1299.0,
-        "best_for": "High-I/O swarms with multiple stereo sensors.",
-        "buy_url": "https://www.modalai.com/"
-    },
-    "Holybro Pixhawk Jetson Baseboard": {
-        "arch": "Unified Carrier", "compute": "Jetson Orin", "dim": "120 x 85 x 30 mm",
-        "weight": 203.2, "power_w": 18.0, "price_egp": 24859.94, "price_usd": 487.0,
-        "best_for": "Heavy AI on larger frames.",
-        "buy_url": "https://holybro.com/"
-    },
-    "Holybro Pixhawk RPi CM4 Baseboard": {
-        "arch": "Unified Carrier", "compute": "RPi CM4", "dim": "110 x 85 x 25 mm",
-        "weight": 95.0, "power_w": 7.0, "price_egp": 25577.62, "price_usd": 350.0,
-        "best_for": "Academic clean-wiring swarms.",
-        "buy_url": "https://holybro.com/"
-    },
-    "BeagleBone Blue": {
-        "arch": "Legacy All-in-One", "compute": "1GHz Cortex-A8", "dim": "86 x 54 x 15 mm",
-        "weight": 35.0, "power_w": 2.0, "price_egp": 3500.0, "price_usd": 80.0,
-        "best_for": "Ultra-budget 2D mapping without cameras.",
-        "buy_url": "https://www.beagleboard.org/"
-    }
-}
+# Assign direct shortcuts so all downstream calculation code remains identical
+MOTORS = st.session_state.MOTORS
+FLIGHT_CONTROLLERS = st.session_state.FLIGHT_CONTROLLERS
+SBCS = st.session_state.SBCS
+INTEGRATED_BOARDS = st.session_state.INTEGRATED_BOARDS
+FRAMES = st.session_state.FRAMES
+BATTERIES = st.session_state.BATTERIES
 
-FRAMES = {
-    "Custom 330mm Ducted (Option C)": {
-        "wheelbase_mm": 330, "weight_g": 180.0, "payload_limit_g": 450.0,
-        "motor_count": 4, "max_prop": "5\"", "ducted": True,
-        "price_egp": 3000.0, "price_usd": 58.8, "notes": "Optimized NACA ducts; optimal indoor swarm baseline.",
-        "buy_url": "https://grabcad.com/"
-    },
-    "GEPRC CineLog35 V2 Frame": {
-        "wheelbase_mm": 142, "weight_g": 133.7, "payload_limit_g": 250.0,
-        "motor_count": 4, "max_prop": "3.5\"", "ducted": True,
-        "price_egp": 3566.37, "price_usd": 70.0, "notes": "Heavy-duty injection guards; high drag.",
-        "buy_url": "https://geprc.com/"
-    },
-    "BetaFPV Pavo35 Frame": {
-        "wheelbase_mm": 148, "weight_g": 113.9, "payload_limit_g": 250.0,
-        "motor_count": 4, "max_prop": "3.5\"", "ducted": True,
-        "price_egp": 2547.41, "price_usd": 50.0, "notes": "Lightweight 3.5\" cinewhoop.",
-        "buy_url": "https://betafpv.com/"
-    },
-    "iFlight Protek35 V1.4 Frame": {
-        "wheelbase_mm": 151, "weight_g": 213.5, "payload_limit_g": 300.0,
-        "motor_count": 4, "max_prop": "3.5\"", "ducted": True,
-        "price_egp": 3311.63, "price_usd": 65.0, "notes": "Robust carbon with thick guards.",
-        "buy_url": "https://www.getfpv.com/"
-    },
-    "Holybro X500 V2 Frame Kit": {
-        "wheelbase_mm": 500, "weight_g": 365.0, "payload_limit_g": 1500.0,
-        "motor_count": 4, "max_prop": "10\"", "ducted": False,
-        "price_egp": 6063.95, "price_usd": 119.03, "notes": "410-500mm wheelbase is physically large for tight rooms.",
-        "buy_url": "https://www.3dxr.co.uk/"
-    }
-}
+# Remote GitHub commit handler
+def commit_to_github(payload_dict, target_file="custom_database.json"):
+    if "GITHUB_TOKEN" not in st.secrets or "GITHUB_REPO" not in st.secrets:
+        return False, "GitHub credentials missing in st.secrets."
 
-BATTERIES = {
-    "4S1P Molicel P45B 21700 Li-ion (Custom)": {
-        "cells": 4,
-        "mah": 4500,
-        "weight_g": 280.0,
-        "c_rating": 10,
-        "voltage": 14.8,
-        "wh": 66.6,
-        "price_egp": 2500.0,
-        "price_usd": 49.0,
-        "dimensions": "N/A",
-        "notes": "Highest energy density (238 Wh/kg); low IR prevents voltage sag.",
-        "buy_url": "https://www.18650batterystore.com/products/molicel-p45b"
-    },
+    token = st.secrets["GITHUB_TOKEN"]
+    repo = st.secrets["GITHUB_REPO"]
+    url = f"https://api.github.com/repos/{repo}/contents/{target_file}"
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github.v3+json"}
 
-    "LAVA 6S 1100mAh LiPo": {
-        "cells": 6,
-        "mah": 1100,
-        "weight_g": 192.0,
-        "c_rating": 100,
-        "voltage": 22.2,
-        "wh": 24.4,
-        "price_egp": 1783.13,
-        "price_usd": 35.0,
-        "dimensions": "78 × 38 × 36 mm",
-        "notes": "High burst C-rating, low capacity.",
-        "buy_url": "https://betafpv.com/products/lava-6s-1100mah-lipo-battery"
-    },
+    res = requests.get(url, headers=headers)
+    sha = res.json().get("sha") if res.status_code == 200 else None
 
-    "Tattu 6S 1550mAh LiPo R-Line": {
-        "cells": 6,
-        "mah": 1550,
-        "weight_g": 254.0,
-        "c_rating": 150,
-        "voltage": 22.2,
-        "wh": 34.4,
-        "price_egp": 2037.87,
-        "price_usd": 40.0,
-        "dimensions": "78 × 37 × 52 mm",
-        "notes": "Racing LiPo; extremely high discharge capability with modest endurance.",
-        "buy_url": "https://genstattu.com/tattu-r-line-version-5-0-1550mah-6s-150c-22-2v-lipo-battery-pack-with-xt60-plug/"
-    },
+    b64_content = base64.b64encode(json.dumps(payload_dict, indent=2).encode("utf-8")).decode("utf-8")
+    data = {"message": f"Update {target_file} from web UI", "content": b64_content}
+    if sha:
+        data["sha"] = sha
 
-    "Lithium Polymer 3S 10400mAh 40C (170mm)": {
-        "cells": 3,
-        "mah": 10400,
-        "weight_g": None,
-        "c_rating": 40,
-        "voltage": 11.1,
-        "wh": 115.4,
-        "price_egp": 5100.0,
-        "price_usd": 100.10,
-        "dimensions": "170 × 55 × 27 mm",
-        "notes": "Very high-capacity 3S pack for long endurance; heavy and physically large.",
-        "buy_url": "https://makerselectronics.com/product/lithium-polymer-battery-11-1v-3s-104/"
-    },
+    put_res = requests.put(url, headers=headers, json=data)
+    if put_res.status_code in [200, 201]:
+        return True, "Successfully committed updates to GitHub repository."
+    return False, f"API Error: {put_res.json().get('message', 'Failed to commit')}"
 
-    "Lithium Polymer 3S 10400mAh 40C (150mm)": {
-        "cells": 3,
-        "mah": 10400,
-        "weight_g": None,
-        "c_rating": 40,
-        "voltage": 11.1,
-        "wh": 115.4,
-        "price_egp": 4500.0,
-        "price_usd": 88.33,
-        "dimensions": "150 × 70 × 22 mm",
-        "notes": "High-capacity 3S endurance pack with a shorter but wider form factor.",
-        "buy_url": "https://makerselectronics.com/product/lithium-polymer-battery-11-1-v-10-2/"
-    },
-
-    "Lithium Polymer 3S 3300mAh 40C": {
-        "cells": 3,
-        "mah": 3300,
-        "weight_g": 250.0,
-        "c_rating": 40,
-        "voltage": 11.1,
-        "wh": 36.6,
-        "price_egp": 1950.0,
-        "price_usd": 38.28,
-        "dimensions": "140 × 45 × 21 mm",
-        "notes": "Medium-capacity 3S pack; reasonable balance between endurance and weight.",
-        "buy_url": "https://makerselectronics.com/product/polymer-battery-11-1v-3300mah-40c/"
-    },
-
-    "Lithium Polymer 3S 1500mAh 35C": {
-        "cells": 3,
-        "mah": 1500,
-        "weight_g": 110.0,
-        "c_rating": 35,
-        "voltage": 11.1,
-        "wh": 16.7,
-        "price_egp": 1100.0,
-        "price_usd": 21.59,
-        "dimensions": "75 × 35 × 25 mm",
-        "notes": "Lightweight 3S battery suitable for smaller drone platforms.",
-        "buy_url": "https://makerselectronics.com/product/polymer-battery-11-1v-1500mah-35c/"
-    },
-
-    "Lithium Polymer 3S 22000mAh 35C": {
-        "cells": 3,
-        "mah": 22000,
-        "weight_g": None,
-        "c_rating": 35,
-        "voltage": 11.1,
-        "wh": 244.2,
-        "price_egp": 12000.0,
-        "price_usd": 235.54,
-        "dimensions": "180 × 75 × 35 mm",
-        "notes": "Extremely high-capacity endurance pack; very heavy and intended for large platforms.",
-        "buy_url": "https://makerselectronics.com/product/lithium-polymer-batter-11-1v-3s-2200/"
-    },
-
-    "Lithium Polymer 3S 10400mAh 40C (160mm)": {
-        "cells": 3,
-        "mah": 10400,
-        "weight_g": None,
-        "c_rating": 40,
-        "voltage": 11.1,
-        "wh": 115.4,
-        "price_egp": 5100.0,
-        "price_usd": 100.10,
-        "dimensions": "160 × 45 × 30 mm",
-        "notes": "High-capacity 3S endurance pack with a relatively narrow form factor.",
-        "buy_url": "https://makerselectronics.com/product/lithium-polymer-battery-11-1-v-3s-10/"
-    },
-
-    "Lithium Polymer 3S 5200mAh 40C": {
-        "cells": 3,
-        "mah": 5200,
-        "weight_g": 350.0,
-        "c_rating": 40,
-        "voltage": 11.1,
-        "wh": 57.7,
-        "price_egp": 2750.0,
-        "price_usd": 53.98,
-        "dimensions": "145 × 50 × 28 mm",
-        "notes": "Good capacity-to-weight balance for medium-size 3S systems.",
-        "buy_url": "https://makerselectronics.com/product/polymer-battery-11-1v-5200mah-40c/"
-    },
-
-    "Lithium Polymer 3S 2200mAh 40C (UGE-One)": {
-        "cells": 3,
-        "mah": 2200,
-        "weight_g": 120.0,
-        "c_rating": 40,
-        "voltage": 11.1,
-        "wh": 24.4,
-        "price_egp": None,
-        "price_usd": None,
-        "dimensions": "92 × 31 × 19 mm",
-        "notes": "Compact 3S pack suitable for small drones and RC platforms.",
-        "buy_url": "https://uge-one.com/product/lithium-polymer-lipo-rechargeable-battery-11-1v-2200mah-40c-for-drone-rc-helicopter/"
-    },
-
-    "SUPER NANO 3S 2200mAh LiPo": {
-        "cells": 3,
-        "mah": 2200,
-        "weight_g": 185.0,
-        "c_rating": 60,
-        "voltage": 11.1,
-        "wh": 24.4,
-        "price_egp": 1850.0,
-        "price_usd": 36.31,
-        "dimensions": "108 × 36.5 × 25.5 mm",
-        "notes": "Compact 3S pack with a relatively high discharge rating.",
-        "buy_url": "https://circuits-elec.com/products/super-nano-lithium-polymer-battery-11-1-v-2200-mah-3s"
-    },
-
-    "SUPER NANO 3S 8000mAh 35C": {
-        "cells": 3,
-        "mah": 8000,
-        "weight_g": 600.0,
-        "c_rating": 35,
-        "voltage": 11.1,
-        "wh": 88.8,
-        "price_egp": 3600.0,
-        "price_usd": 70.66,
-        "dimensions": "186 × 65 × 55 mm",
-        "notes": "Heavy endurance pack for large platforms.",
-        "buy_url": "https://circuits-elec.com/products/lithium-polymer-battery-11-1-v-10400-mah-40c-pre-ordered"
-    }
-}
 # ==========================================
 # 2. APPLICATION LAYOUT
 # ==========================================
 
-st.title("Autonomous Indoor Swarm UAV Trade Study & Builder")
+st.title("UAV Trade Component Lists & Builder")
 st.caption("Systems engineering evaluator for localized decentralized SLAM & RF/RSSI mapping platforms.")
 
-tab_catalogs, tab_builder = st.tabs(["Component Catalogs", "Drone Builder"])
+tab_catalogs, tab_builder, tab_admin = st.tabs(["Component Catalogs", "Drone Builder", "Admin (Add Parts)"])
 
 # ==========================================
 # TAB 1: COMPONENT CATALOGS
@@ -479,8 +172,13 @@ with tab_builder:
     compute_and_fc_weight = fc_weight + sbc_weight
     total_payload_weight = compute_and_fc_weight + sensor_weight
     
+    # Safe weight handling if battery weight is null/None in data
+    batt_weight = battery["weight_g"] if battery["weight_g"] is not None else 0.0
+    batt_price_egp = battery["price_egp"] if battery["price_egp"] is not None else 0.0
+    batt_price_usd = battery["price_usd"] if battery["price_usd"] is not None else 0.0
+    
     # All-Up Weight (AUW)
-    auw_g = frame["weight_g"] + propulsion_weight + battery["weight_g"] + total_payload_weight
+    auw_g = frame["weight_g"] + propulsion_weight + batt_weight + total_payload_weight
     auw_kg = auw_g / 1000.0
     
     # Thrust and TWR
@@ -493,8 +191,8 @@ with tab_builder:
     esc_cost_egp = 1500.0  # est 4-in-1 40A ESC
     esc_cost_usd = 30.0
     
-    total_cost_egp = frame["price_egp"] + motor_total_cost_egp + esc_cost_egp + fc_price_egp + sbc_price_egp + battery["price_egp"]
-    total_cost_usd = frame["price_usd"] + motor_total_cost_usd + esc_cost_usd + fc_price_usd + sbc_price_usd + battery["price_usd"]
+    total_cost_egp = frame["price_egp"] + motor_total_cost_egp + esc_cost_egp + fc_price_egp + sbc_price_egp + batt_price_egp
+    total_cost_usd = frame["price_usd"] + motor_total_cost_usd + esc_cost_usd + fc_price_usd + sbc_price_usd + batt_price_usd
 
     # Hover Endurance Calculation
     hover_mech_power_w = auw_g / motor["efficiency_hover_gw"]
@@ -514,7 +212,7 @@ with tab_builder:
             st.markdown("**Mass Distribution:**")
             st.write(f"- Frame & Cowlings: `{frame['weight_g']} g`")
             st.write(f"- Propulsion: `{propulsion_weight:.1f} g`")
-            st.write(f"- Battery Pack: `{battery['weight_g']} g`")
+            st.write(f"- Battery Pack: `{batt_weight:.1f} g`")
             st.write(f"- Compute & Avionics: `{compute_and_fc_weight:.1f} g`")
             st.write(f"- Sensors & RF Payload: `{sensor_weight:.1f} g`")
             
@@ -576,7 +274,7 @@ with tab_builder:
         with st.expander("View Step-by-Step Physics Calculations"):
             st.markdown("**1. All-Up Weight (AUW)**")
             st.latex(r"AUW = W_{frame} + (W_{motor} \times N) + W_{esc} + W_{batt} + W_{avionics} + W_{sensors}")
-            st.markdown(f"AUW = {frame['weight_g']}g + ({motor['weight']}g × {num_motors}) + {esc_wiring_weight}g + {battery['weight_g']}g + {compute_and_fc_weight}g + {sensor_weight}g = **{auw_g:.1f} g**")
+            st.markdown(f"AUW = {frame['weight_g']}g + ({motor['weight']}g × {num_motors}) + {esc_wiring_weight}g + {batt_weight}g + {compute_and_fc_weight}g + {sensor_weight}g = **{auw_g:.1f} g**")
             
             st.markdown("**2. Thrust-to-Weight Ratio (TWR)**")
             st.latex(r"TWR = \frac{Thrust_{max} \times N}{AUW}")
@@ -638,7 +336,7 @@ with tab_builder:
     bom_data.append({"Component": "Frame", "Model": selected_frame_name, "Weight (g)": frame["weight_g"], "Cost (EGP)": frame["price_egp"], "Where to Buy": frame["buy_url"]})
     bom_data.append({"Component": f"Motors (x{num_motors})", "Model": motor_name, "Weight (g)": motor["weight"] * num_motors, "Cost (EGP)": motor["price_egp"] * num_motors, "Where to Buy": motor["buy_url"]})
     bom_data.append({"Component": "ESC & Wiring", "Model": "4-in-1 40A ESC", "Weight (g)": esc_wiring_weight, "Cost (EGP)": esc_cost_egp, "Where to Buy": "https://makerselectronics.com"})
-    bom_data.append({"Component": "Battery", "Model": battery_name, "Weight (g)": battery["weight_g"], "Cost (EGP)": battery["price_egp"], "Where to Buy": battery["buy_url"]})
+    bom_data.append({"Component": "Battery", "Model": battery_name, "Weight (g)": batt_weight, "Cost (EGP)": batt_price_egp, "Where to Buy": battery["buy_url"]})
     
     if arch_choice == "Modular (Separate FC + SBC)":
         bom_data.append({"Component": "Flight Controller", "Model": fc_name, "Weight (g)": fc_weight, "Cost (EGP)": fc_price_egp, "Where to Buy": fc["buy_url"]})
@@ -664,3 +362,50 @@ with tab_builder:
         },
         use_container_width=True, hide_index=True
     )
+
+# ==========================================
+# TAB 3: ADMIN & PERSISTENCE
+# ==========================================
+with tab_admin:
+    st.subheader("Database Management")
+    admin_pass = st.text_input("Enter Admin Password to unlock:", type="password")
+    
+    if admin_pass == st.secrets.get("ADMIN_PASSWORD", "local_test_pass"):
+        st.success("Admin access granted.")
+        
+        st.markdown("### Add New Component")
+        st.caption("Select a category, modify the JSON template below, and add it to the live session.")
+        
+        target_category = st.selectbox("Target Category", CATEGORIES)
+        new_comp_name = st.text_input("New Component Name (e.g., T-Motor F1507)")
+        
+        sample_key = list(st.session_state[target_category].keys())[0] if st.session_state[target_category] else None
+        sample_data = st.session_state[target_category][sample_key] if sample_key else {}
+        template = json.dumps(sample_data, indent=4)
+        
+        new_comp_json = st.text_area("Component Configuration (JSON format)", value=template, height=280)
+        
+        if st.button("Add to Local Session"):
+            if new_comp_name.strip():
+                try:
+                    parsed_data = json.loads(new_comp_json)
+                    st.session_state[target_category][new_comp_name] = parsed_data
+                    st.success(f"Successfully loaded '{new_comp_name}' into {target_category}!")
+                    st.rerun()
+                except json.JSONDecodeError:
+                    st.error("Invalid JSON format. Check for missing quotes or commas.")
+            else:
+                st.warning("Please specify a component name.")
+                
+        st.markdown("---")
+        
+        if st.button("🚀 Commit All Changes to GitHub Repository"):
+            with st.spinner("Pushing database to GitHub..."):
+                full_catalog = {cat: st.session_state[cat] for cat in CATEGORIES}
+                success, msg = commit_to_github(full_catalog)
+                if success:
+                    st.success(msg)
+                else:
+                    st.error(msg)
+    elif admin_pass:
+        st.error("Incorrect password. Access denied.")

@@ -64,7 +64,7 @@ def commit_to_github(payload_dict, target_file="custom_database.json"):
 # 2. APPLICATION LAYOUT
 # ==========================================
 
-st.title("UAV Trade Component Lists & Builder")
+st.title("UAV Component Lists & Builder For Indoor Flight")
 st.caption("Systems engineering evaluator for localized decentralized SLAM & RF/RSSI mapping platforms.")
 
 tab_catalogs, tab_builder, tab_admin = st.tabs(["Component Catalogs", "Drone Builder", "Admin (Add Parts)"])

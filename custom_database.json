@@ -328,19 +328,6 @@
     }
   },
   "BATTERIES": {
-    "4S1P Molicel P45B 21700 Li-ion (Custom)": {
-      "cells": 4,
-      "mah": 4500,
-      "weight_g": 280.0,
-      "c_rating": 10,
-      "voltage": 14.8,
-      "wh": 66.6,
-      "price_egp": 2500.0,
-      "price_usd": 49.0,
-      "dimensions": "N/A",
-      "notes": "Highest energy density (238 Wh/kg); low IR prevents voltage sag.",
-      "buy_url": "https://www.18650batterystore.com/products/molicel-p45b"
-    },
     "LAVA 6S 1100mAh LiPo": {
       "cells": 6,
       "mah": 1100,

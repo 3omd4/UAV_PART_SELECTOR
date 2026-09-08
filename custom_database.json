@@ -409,7 +409,7 @@
     "Lithium Polymer 3S 22000mAh 35C": {
       "cells": 3,
       "mah": 22000,
-      "weight_g": null,
+      "weight_g": 960.0,
       "c_rating": 35,
       "voltage": 11.1,
       "wh": 244.2,
@@ -422,7 +422,7 @@
     "Lithium Polymer 3S 10400mAh 40C (160mm)": {
       "cells": 3,
       "mah": 10400,
-      "weight_g": null,
+      "weight_g": 500.0,
       "c_rating": 40,
       "voltage": 11.1,
       "wh": 115.4,

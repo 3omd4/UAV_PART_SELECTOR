@@ -17,254 +17,6 @@ st.set_page_config(
 # 1. DATABASE & SESSION INITIALIZATION
 # ==========================================
 
-# Full default fallback dictionaries
-DEFAULT_MOTORS = {
-    "XXD A2212 (1000KV)": {
-        "stator": "22 x 12 mm", "weight": 48.0, "kv": 1000, "cells": [3, 4],
-        "prop": "8\"–10\"", "thrust": 900.0, "source": "Local (Makers/RAM)",
-        "price_egp": 430.0, "price_usd": 8.5, "efficiency_hover_gw": 8.0,
-        "notes": "Large open frames only; high downwash indoors.",
-        "buy_url": "https://microohm-eg.com/a2212-6t-2200kv-brushless-motor-for-drone/"
-    },
-    "Holybro 2216 (920KV)": {
-        "stator": "22 x 16 mm", "weight": 54.0, "kv": 920, "cells": [4],
-        "prop": "9\"–10\"", "thrust": 1050.0, "source": "Global / Kit",
-        "price_egp": 1182.83, "price_usd": 23.2, "efficiency_hover_gw": 8.5,
-        "notes": "Standard X500 kit motor; too large for tight swarms.",
-        "buy_url": "https://ar.aliexpress.com/item/1005004562567395.html"
-    },
-    "EMAX ECO II 2207 (1700KV)": {
-        "stator": "22 x 7 mm", "weight": 33.0, "kv": 1700, "cells": [4, 5, 6],
-        "prop": "5\"", "thrust": 1500.0, "source": "Global / FPV shops",
-        "price_egp": 1199.00, "price_usd": 23.5, "efficiency_hover_gw": 6.8,
-        "notes": "Top pick for 330mm custom ducted frame lifting SBC.",
-        "buy_url": "https://www.fruugo.eg/emax-eco-ii-2207-1700kv-brushless-motor-drone-multirotor-cw-motor-3-6s-for-rc-fpv-racing-drone/p-463531857-975406632"
-    },
-    "T-Motor F2203.5 (1500KV)": {
-        "stator": "22 x 3.5 mm", "weight": 19.7, "kv": 1500, "cells": [4, 5, 6],
-        "prop": "4\"–5\"", "thrust": 875.0, "source": "Global (Specialized RC)",
-        "price_egp": 936.95, "price_usd": 18.4, "efficiency_hover_gw": 7.5,
-        "notes": "High efficiency pick for lightweight micro-heavy lifters.",
-        "buy_url": "https://ar.aliexpress.com/item/1005007986142505.html"
-    },
-    "BrotherHobby Avenger 2004 (1700KV)": {
-        "stator": "20 x 4 mm", "weight": 16.6, "kv": 1700, "cells": [4],
-        "prop": "4\"", "thrust": 700.0, "source": "Global (Specialized FPV)",
-        "price_egp": 1300.86, "price_usd": 25.5, "efficiency_hover_gw": 7.0,
-        "notes": "Compact 4-inch frames; payload must stay under 250g.",
-        "buy_url": "https://ar.aliexpress.com/item/1005010804220626.html"
-    },
-    "GEPRC SPEEDX2 2105.5 (2650KV)": {
-        "stator": "21 x 5.5 mm", "weight": 21.0, "kv": 2650, "cells": [4, 6],
-        "prop": "3.5\"", "thrust": 800.0, "source": "Global (GEPRC/Banggood)",
-        "price_egp": 988.03, "price_usd": 19.4, "efficiency_hover_gw": 5.2,
-        "notes": "Standard CineLog35 motor; high RPM draw cuts endurance.",
-        "buy_url": "https://ar.aliexpress.com/item/1005009435278291.html"
-    },
-    "iFlight XING2 1404 (3800KV)": {
-        "stator": "14 x 4 mm", "weight": 9.1, "kv": 3800, "cells": [3, 4],
-        "prop": "2.5\"–3.5\"", "thrust": 385.0, "source": "Global (iFlight/AliExpress)",
-        "price_egp": 631.83, "price_usd": 12.4, "efficiency_hover_gw": 5.0,
-        "notes": "Too weak to lift an SBC or LiDAR payload.",
-        "buy_url": "https://ar.aliexpress.com/item/1005002346308981.html"
-    }
-}
-
-DEFAULT_FC = {
-    "Holybro Pixhawk 6C Mini": {
-        "mcu": "STM32H743", "weight": 39.0, "dim": "53.3 x 39 x 16.2 mm",
-        "firmware": "PX4, ArduPilot", "price_egp": 11073.91, "price_usd": 150.0,
-        "notes": "Full aluminum case, dual IMU redundancy.",
-        "buy_url": "https://holybro.com/products/pixhawk-6c-mini"
-    },
-    "Matek H743-SLIM V3": {
-        "mcu": "STM32H743VIH6", "weight": 7.0, "dim": "36 x 36 x 5 mm",
-        "firmware": "ArduPilot, BetaFlight", "price_egp": 3435.92, "price_usd": 115.0,
-        "notes": "Ultra-lightweight bare-PCB, dual IMUs.",
-        "buy_url": "https://ardupilot.org/copter/docs/common-matekh743-wing.html"
-    },
-    "Holybro Kakute H7 Mini": {
-        "mcu": "STM32H743", "weight": 5.1, "dim": "29 x 29 mm",
-        "firmware": "ArduPilot, BetaFlight", "price_egp": 3293.61, "price_usd": 75.0,
-        "notes": "Compact 20x20mm mounting for small whoops.",
-        "buy_url": "https://holybro.com/products/kakute-h7-mini"
-    },
-    "CUAV Nora+": {
-        "mcu": "STM32H743", "weight": 48.0, "dim": "60 x 38.8 x 17.5 mm",
-        "firmware": "PX4, ArduPilot", "price_egp": 30305.72, "price_usd": 260.0,
-        "notes": "Triple redundant IMU; heavy and expensive.",
-        "buy_url": "https://store.cuav.net/shop/nora/"
-    }
-}
-
-DEFAULT_SBCS = {
-    "NVIDIA Jetson Orin Nano (SOM + Carrier)": {
-        "cpu": "6-core ARM / 8GB", "ai_tops": 40.0, "weight": 75.0, "dim": "100 x 79 x 25 mm",
-        "power_w": 12.0, "price_egp": 35000.0, "price_usd": 449.0,
-        "best_for": "Heavy visual SLAM & deep learning.",
-        "buy_url": "https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-orin/nano-super-developer-kit/"
-    },
-    "Khadas Edge2 (Maker Kit)": {
-        "cpu": "8-core RK3588S / 8GB", "ai_tops": 6.0, "weight": 25.0, "dim": "82 x 57.5 x 5.7 mm",
-        "power_w": 7.5, "price_egp": 21837.0, "price_usd": 199.0,
-        "best_for": "Balanced edge AI & low-profile mounting.",
-        "buy_url": "https://www.khadas.com/edge2"
-    },
-    "Raspberry Pi 5 (8GB)": {
-        "cpu": "Quad-core BCM2712", "ai_tops": 0.0, "weight": 46.0, "dim": "85 x 56 x 15 mm",
-        "power_w": 8.0, "price_egp": 14000.0, "price_usd": 80.0,
-        "best_for": "Ubiquitous ROS 2 nodes, 2D LiDAR SLAM.",
-        "buy_url": "https://www.raspberrypi.com/products/raspberry-pi-5/"
-    },
-    "Radxa Zero 3W": {
-        "cpu": "Quad-core RK3566", "ai_tops": 1.0, "weight": 9.0, "dim": "65 x 30 x 5 mm",
-        "power_w": 3.0, "price_egp": 4240.0, "price_usd": 25.0,
-        "best_for": "Minimalist weight budget; ESP32 mesh router.",
-        "buy_url": "https://radxa.com/products/zeros/zero3w/"
-    }
-}
-
-DEFAULT_INTEGRATED = {
-    "ModalAI VOXL 2 Mini": {
-        "arch": "True All-in-One (DSP PX4)", "compute": "Qualcomm QRB5165", "dim": "50 x 50 x 15 mm",
-        "weight": 11.0, "power_w": 5.0, "price_egp": 63699.0, "price_usd": 1249.0,
-        "best_for": "Extreme weight limits; professional edge AI.",
-        "buy_url": "https://www.modalai.com/"
-    },
-    "ModalAI VOXL 2": {
-        "arch": "True All-in-One (DSP PX4)", "compute": "Qualcomm QRB5165", "dim": "70 x 70 x 15 mm",
-        "weight": 16.0, "power_w": 6.0, "price_egp": 66249.0, "price_usd": 1299.0,
-        "best_for": "High-I/O swarms with multiple stereo sensors.",
-        "buy_url": "https://www.modalai.com/"
-    },
-    "Holybro Pixhawk Jetson Baseboard": {
-        "arch": "Unified Carrier", "compute": "Jetson Orin", "dim": "120 x 85 x 30 mm",
-        "weight": 203.2, "power_w": 18.0, "price_egp": 24859.94, "price_usd": 487.0,
-        "best_for": "Heavy AI on larger frames.",
-        "buy_url": "https://holybro.com/"
-    },
-    "Holybro Pixhawk RPi CM4 Baseboard": {
-        "arch": "Unified Carrier", "compute": "RPi CM4", "dim": "110 x 85 x 25 mm",
-        "weight": 95.0, "power_w": 7.0, "price_egp": 25577.62, "price_usd": 350.0,
-        "best_for": "Academic clean-wiring swarms.",
-        "buy_url": "https://holybro.com/"
-    },
-    "BeagleBone Blue": {
-        "arch": "Legacy All-in-One", "compute": "1GHz Cortex-A8", "dim": "86 x 54 x 15 mm",
-        "weight": 35.0, "power_w": 2.0, "price_egp": 3500.0, "price_usd": 80.0,
-        "best_for": "Ultra-budget 2D mapping without cameras.",
-        "buy_url": "https://www.beagleboard.org/"
-    }
-}
-
-DEFAULT_FRAMES = {
-    "Custom 330mm Ducted (Option C)": {
-        "wheelbase_mm": 330, "weight_g": 180.0, "payload_limit_g": 450.0,
-        "motor_count": 4, "max_prop": "5\"", "ducted": True,
-        "price_egp": 3000.0, "price_usd": 58.8, "notes": "Optimized NACA ducts; optimal indoor swarm baseline.",
-        "buy_url": "https://grabcad.com/"
-    },
-    "GEPRC CineLog35 V2 Frame": {
-        "wheelbase_mm": 142, "weight_g": 133.7, "payload_limit_g": 250.0,
-        "motor_count": 4, "max_prop": "3.5\"", "ducted": True,
-        "price_egp": 3566.37, "price_usd": 70.0, "notes": "Heavy-duty injection guards; high drag.",
-        "buy_url": "https://geprc.com/"
-    },
-    "BetaFPV Pavo35 Frame": {
-        "wheelbase_mm": 148, "weight_g": 113.9, "payload_limit_g": 250.0,
-        "motor_count": 4, "max_prop": "3.5\"", "ducted": True,
-        "price_egp": 2547.41, "price_usd": 50.0, "notes": "Lightweight 3.5\" cinewhoop.",
-        "buy_url": "https://betafpv.com/"
-    },
-    "iFlight Protek35 V1.4 Frame": {
-        "wheelbase_mm": 151, "weight_g": 213.5, "payload_limit_g": 300.0,
-        "motor_count": 4, "max_prop": "3.5\"", "ducted": True,
-        "price_egp": 3311.63, "price_usd": 65.0, "notes": "Robust carbon with thick guards.",
-        "buy_url": "https://www.getfpv.com/"
-    },
-    "Holybro X500 V2 Frame Kit": {
-        "wheelbase_mm": 500, "weight_g": 365.0, "payload_limit_g": 1500.0,
-        "motor_count": 4, "max_prop": "10\"", "ducted": False,
-        "price_egp": 6063.95, "price_usd": 119.03, "notes": "410-500mm wheelbase is physically large for tight rooms.",
-        "buy_url": "https://www.3dxr.co.uk/"
-    },
-    "F450 Quad Frame": {
-        "wheelbase_mm": 450, "weight_g": 280.0, "payload_limit_g": 800.0,
-        "motor_count": 4, "max_prop": "10\"", "ducted": False,
-        "price_egp": 500.0, "price_usd": 10.0, "notes": "Cheap baseline; exposed props.",
-        "buy_url": "https://ar.aliexpress.com/item/1005010192554268.html"
-    },
-    "F550 Hexa-Rotor Frame": {
-        "wheelbase_mm": 550, "weight_g": 424.0, "payload_limit_g": 1200.0,
-        "motor_count": 6, "max_prop": "10\"", "ducted": False,
-        "price_egp": 1003.74, "price_usd": 19.70, "notes": "6 motors; excessive downwash in confined spaces.",
-        "buy_url": "https://ar.aliexpress.com/item/1005006994473505.html"
-    },
-    "Tarot X6 Hexacopter Frame": {
-        "wheelbase_mm": 960, "weight_g": 2000.0, "payload_limit_g": 5000.0,
-        "motor_count": 6, "max_prop": "18\"", "ducted": False,
-        "price_egp": 14787.69, "price_usd": 290.25, "notes": "Heavy lift industrial; impossible for indoor swarms.",
-        "buy_url": "https://www.3dxr.co.uk/products/tarot-x6"
-    }
-}
-
-DEFAULT_BATTERIES = {
-    "4S1P Molicel P45B 21700 Li-ion": {
-        "cells": 4, "mah": 4500, "weight_g": 280.0, "c_rating": 10,
-        "voltage": 14.8, "wh": 66.6, "price_egp": 2500.0, "price_usd": 49.0,
-        "dimensions": "85 × 43 × 43 mm", "notes": "Highest energy density (238 Wh/kg).",
-        "buy_url": "https://www.18650batterystore.com/"
-    },
-    "LAVA 6S 1100mAh LiPo": {
-        "cells": 6, "mah": 1100, "weight_g": 192.0, "c_rating": 100,
-        "voltage": 22.2, "wh": 24.4, "price_egp": 1783.13, "price_usd": 35.0,
-        "dimensions": "78 × 39 × 38 mm", "notes": "High burst C-rating, low capacity.",
-        "buy_url": "https://betafpv.com/products/lava-6s-1100mah-lipo-battery"
-    },
-    "Tattu 6S 1550mAh LiPo R-Line": {
-        "cells": 6, "mah": 1550, "weight_g": 254.0, "c_rating": 150,
-        "voltage": 22.2, "wh": 34.4, "price_egp": 2037.87, "price_usd": 40.0,
-        "dimensions": "78 × 39 × 38 mm", "notes": "Racing LiPo; high discharge, modest endurance.",
-        "buy_url": "https://genstattu.com/"
-    },
-    "Lithium Polymer 3S 5200mAh 40C": {
-        "cells": 3, "mah": 5200, "weight_g": 350.0, "c_rating": 40,
-        "voltage": 11.1, "wh": 57.7, "price_egp": 2750.0, "price_usd": 53.98,
-        "dimensions": "135 × 42 × 30 mm", "notes": "Good capacity-to-weight for 3S systems.",
-        "buy_url": "https://makerselectronics.com/"
-    },
-    "Lithium Polymer 3S 3300mAh 40C": {
-        "cells": 3, "mah": 3300, "weight_g": 250.0, "c_rating": 40,
-        "voltage": 11.1, "wh": 36.6, "price_egp": 1950.0, "price_usd": 38.28,
-        "dimensions": "135 × 42 × 23 mm", "notes": "Medium 3S pack.",
-        "buy_url": "https://makerselectronics.com/"
-    },
-    "Lithium Polymer 3S 2200mAh 40C": {
-        "cells": 3, "mah": 2200, "weight_g": 185.0, "c_rating": 40,
-        "voltage": 11.1, "wh": 24.4, "price_egp": 1850.0, "price_usd": 36.31,
-        "dimensions": "105 × 34 × 24 mm", "notes": "Common local hobby pack.",
-        "buy_url": "https://uge-one.com/"
-    },
-    "Lithium Polymer 3S 10400mAh 40C": {
-        "cells": 3, "mah": 10400, "weight_g": 620.0, "c_rating": 40,
-        "voltage": 11.1, "wh": 115.4, "price_egp": 4500.0, "price_usd": 88.33,
-        "dimensions": "165 × 65 × 35 mm", "notes": "Heavy pack; requires larger motors.",
-        "buy_url": "https://makerselectronics.com/"
-    },
-    "SUPER NANO 3S 8000mAh 35C": {
-        "cells": 3, "mah": 8000, "weight_g": 600.0, "c_rating": 35,
-        "voltage": 11.1, "wh": 88.8, "price_egp": 3600.0, "price_usd": 70.66,
-        "dimensions": "155 × 45 × 42 mm", "notes": "Heavy endurance pack for large platforms.",
-        "buy_url": "https://circuits-elec.com/"
-    }
-}
-
-DEFAULT_PRESETS = {
-    "Balanced Default": {"auw": 1.0, "twr": 1.0, "hover": 1.0, "cost": 1.0},
-    "Endurance Optimized": {"auw": 0.5, "twr": 0.5, "hover": 2.5, "cost": 1.0},
-    "Budget Friendly": {"auw": 1.0, "twr": 1.0, "hover": 1.0, "cost": 3.0}
-}
-
 CATEGORIES = ["MOTORS", "FLIGHT_CONTROLLERS", "SBCS", "INTEGRATED_BOARDS", "FRAMES", "BATTERIES", "WEIGHT_PRESETS"]
 
 # Load permanent component database from JSON file
@@ -274,14 +26,18 @@ try:
 except Exception:
     db_from_file = {}
 
-# Initialize session state for each category, using the hardcoded defaults if the JSON is missing or empty
-if "MOTORS" not in st.session_state: st.session_state.MOTORS = db_from_file.get("MOTORS", DEFAULT_MOTORS) or DEFAULT_MOTORS
-if "FLIGHT_CONTROLLERS" not in st.session_state: st.session_state.FLIGHT_CONTROLLERS = db_from_file.get("FLIGHT_CONTROLLERS", DEFAULT_FC) or DEFAULT_FC
-if "SBCS" not in st.session_state: st.session_state.SBCS = db_from_file.get("SBCS", DEFAULT_SBCS) or DEFAULT_SBCS
-if "INTEGRATED_BOARDS" not in st.session_state: st.session_state.INTEGRATED_BOARDS = db_from_file.get("INTEGRATED_BOARDS", DEFAULT_INTEGRATED) or DEFAULT_INTEGRATED
-if "FRAMES" not in st.session_state: st.session_state.FRAMES = db_from_file.get("FRAMES", DEFAULT_FRAMES) or DEFAULT_FRAMES
-if "BATTERIES" not in st.session_state: st.session_state.BATTERIES = db_from_file.get("BATTERIES", DEFAULT_BATTERIES) or DEFAULT_BATTERIES
-if "WEIGHT_PRESETS" not in st.session_state: st.session_state.WEIGHT_PRESETS = db_from_file.get("WEIGHT_PRESETS", DEFAULT_PRESETS) or DEFAULT_PRESETS
+# Initialize session state for each category
+for cat in CATEGORIES:
+    if cat not in st.session_state:
+        st.session_state[cat] = db_from_file.get(cat, {})
+
+# Ensure there is at least a fallback for weight presets if the JSON is completely empty
+if not st.session_state.WEIGHT_PRESETS:
+    st.session_state.WEIGHT_PRESETS = {
+        "Balanced Default": {"auw": 1.0, "twr": 1.0, "hover": 1.0, "cost": 1.0},
+        "Endurance Optimized": {"auw": 0.5, "twr": 0.5, "hover": 2.5, "cost": 1.0},
+        "Budget Friendly": {"auw": 1.0, "twr": 1.0, "hover": 1.0, "cost": 3.0}
+    }
 
 # Assign direct shortcuts
 MOTORS = st.session_state.MOTORS
@@ -658,8 +414,297 @@ with tab_admin:
     admin_pass = st.text_input("Enter Admin Password to unlock:", type="password")
     if admin_pass == st.secrets.get("ADMIN_PASSWORD", "local_test_pass"):
         st.success("Admin access granted.")
-        # Code block logic preserved exactly as requested.
-        st.info("To make your added presets or components permanent, click the cloud sync button below.")
+        
+        # ------------------------------------------
+        # 1. ADD COMPONENT SECTION
+        # ------------------------------------------
+        st.markdown("### Add New Component")
+        st.caption("All fields marked with * are required.")
+        # Only allow adding to standard component lists, not the presets here
+        add_categories = [c for c in CATEGORIES if c != "WEIGHT_PRESETS"]
+        target_category = st.selectbox("Target Category for Addition:", add_categories, key="add_cat")
+        with st.form("add_part_form", clear_on_submit=False):
+            st.markdown("**General Information**")
+            row1_col1, row1_col2 = st.columns([2, 2])
+            new_comp_name = row1_col1.text_input("Component Model Name*", value="", placeholder="e.g., T-Motor F1507")
+            buy_url = row1_col2.text_input("Vendor / Purchase URL*", value="", placeholder="https://...")
+            row2_col1, row2_col2 = st.columns(2)
+            price_egp = row2_col1.number_input("Price (EGP)*", min_value=0.0, value=None, step=50.0)
+            price_usd = row2_col2.number_input("Price (USD)*", min_value=0.0, value=None, step=1.0)
+            st.markdown("---")
+            st.markdown(f"**{target_category} Specifications**")
+            
+            new_entry = {}
+            if target_category == "MOTORS":
+                m_c1, m_c2, m_c3 = st.columns(3)
+                weight = m_c1.number_input("Weight (g)*", min_value=0.1, value=None, step=0.5)
+                thrust = m_c2.number_input("Max Thrust (g)*", min_value=1.0, value=None, step=10.0)
+                kv = m_c3.number_input("KV Rating*", min_value=100, value=None, step=50)
+                m_c4, m_c5, m_c6 = st.columns(3)
+                stator = m_c4.text_input("Stator Size*", value="", placeholder="22 x 07 mm")
+                prop = m_c5.text_input("Supported Propeller Size*", value="", placeholder="5\"")
+                eff = m_c6.number_input("Hover Efficiency (g/W)*", min_value=1.0, value=None, step=0.1)
+                m_c7, m_c8 = st.columns([2, 1])
+                source = m_c7.text_input("Source / Retailer Type*", value="", placeholder="Global / FPV shops")
+                cells = m_c8.multiselect("Supported Cell Counts (S)*", options=[1, 2, 3, 4, 5, 6, 8], default=[])
+                notes = st.text_input("Engineering Notes (Optional)", value="")
+                new_entry = {
+                    "stator": stator, "weight": weight, "kv": int(kv) if kv is not None else None, "cells": cells,
+                    "prop": prop, "thrust": thrust, "source": source, "price_egp": price_egp, "price_usd": price_usd,
+                    "efficiency_hover_gw": eff, "notes": notes, "buy_url": buy_url
+                }
+            elif target_category == "FRAMES":
+                f_c1, f_c2, f_c3 = st.columns(3)
+                wheelbase_mm = f_c1.number_input("Wheelbase (mm)*", min_value=50, value=None, step=10)
+                weight_g = f_c2.number_input("Bare Frame Weight (g)*", min_value=1.0, value=None, step=5.0)
+                payload_limit_g = f_c3.number_input("Max Structural Payload (g)*", min_value=10.0, value=None, step=10.0)
+                f_c4, f_c5, f_c6 = st.columns(3)
+                motor_count = f_c4.number_input("Motor Count*", min_value=3, max_value=8, value=None, step=1)
+                max_prop = f_c5.text_input("Max Propeller Size*", value="", placeholder="5\"")
+                ducted = f_c6.checkbox("Enclosed / Ducted Props?", value=False)
+                notes = st.text_input("Engineering Notes (Optional)", value="")
+                new_entry = {
+                    "wheelbase_mm": int(wheelbase_mm) if wheelbase_mm is not None else None, "weight_g": weight_g,
+                    "payload_limit_g": payload_limit_g, "motor_count": int(motor_count) if motor_count is not None else None,
+                    "max_prop": max_prop, "ducted": ducted, "price_egp": price_egp, "price_usd": price_usd,
+                    "notes": notes, "buy_url": buy_url
+                }
+            elif target_category == "BATTERIES":
+                b_c1, b_c2, b_c3 = st.columns(3)
+                cells_count = b_c1.number_input("Cell Count (S)*", min_value=1, max_value=12, value=None, step=1)
+                mah = b_c2.number_input("Capacity (mAh)*", min_value=100, value=None, step=100)
+                voltage = b_c3.number_input("Nominal Voltage (V)*", min_value=1.0, value=None, step=0.1)
+                b_c4, b_c5, b_c6 = st.columns(3)
+                weight_g = b_c4.number_input("Weight (g)*", min_value=1.0, value=None, step=5.0)
+                wh = b_c5.number_input("Watt-Hours (Wh)*", min_value=1.0, value=None, step=0.5)
+                c_rating = b_c6.number_input("C-Rating*", min_value=1, value=None, step=5)
+                b_c7, b_c8 = st.columns(2)
+                dimensions = b_c7.text_input("Dimensions (L x W x H mm)*", value="", placeholder="100 × 35 × 25 mm")
+                notes = b_c8.text_input("Engineering Notes (Optional)", value="")
+                new_entry = {
+                    "cells": int(cells_count) if cells_count is not None else None, "mah": int(mah) if mah is not None else None,
+                    "weight_g": weight_g, "c_rating": int(c_rating) if c_rating is not None else None,
+                    "voltage": voltage, "wh": wh, "price_egp": price_egp, "price_usd": price_usd,
+                    "dimensions": dimensions, "notes": notes, "buy_url": buy_url
+                }
+            elif target_category == "FLIGHT_CONTROLLERS":
+                fc_c1, fc_c2 = st.columns(2)
+                mcu = fc_c1.text_input("MCU Model*", value="", placeholder="STM32H743")
+                weight = fc_c2.number_input("Weight (g)*", min_value=0.5, value=None, step=0.5)
+                fc_c3, fc_c4 = st.columns(2)
+                dim = fc_c3.text_input("Dimensions (mm)*", value="", placeholder="36 x 36 x 5 mm")
+                firmware = fc_c4.text_input("Supported Firmware*", value="", placeholder="PX4, ArduPilot")
+                notes = st.text_input("Engineering Notes (Optional)", value="")
+                new_entry = {
+                    "mcu": mcu, "weight": weight, "dim": dim, "firmware": firmware,
+                    "price_egp": price_egp, "price_usd": price_usd, "notes": notes, "buy_url": buy_url
+                }
+            elif target_category == "SBCS":
+                s_c1, s_c2, s_c3 = st.columns(3)
+                cpu = s_c1.text_input("Processor / Memory*", value="", placeholder="Quad-core ARM / 8GB")
+                ai_tops = s_c2.number_input("AI TOPS*", min_value=0.0, value=None, step=1.0)
+                power_w = s_c3.number_input("Average Power Draw (W)*", min_value=0.1, value=None, step=0.5)
+                s_c4, s_c5 = st.columns(2)
+                weight = s_c4.number_input("Weight (g)*", min_value=1.0, value=None, step=1.0)
+                dim = s_c5.text_input("Dimensions (mm)*", value="", placeholder="85 x 56 x 15 mm")
+                best_for = st.text_input("Primary Workload / Best For*", value="", placeholder="ROS 2 SLAM Nodes")
+                new_entry = {
+                    "cpu": cpu, "ai_tops": ai_tops, "weight": weight, "dim": dim,
+                    "power_w": power_w, "price_egp": price_egp, "price_usd": price_usd,
+                    "best_for": best_for, "buy_url": buy_url
+                }
+            elif target_category == "INTEGRATED_BOARDS":
+                ib_c1, ib_c2 = st.columns(2)
+                arch = ib_c1.text_input("Architecture Type*", value="", placeholder="Unified Carrier")
+                compute = ib_c2.text_input("Onboard Compute Engine*", value="", placeholder="Jetson Orin")
+                ib_c3, ib_c4, ib_c5 = st.columns(3)
+                weight = ib_c3.number_input("Weight (g)*", min_value=1.0, value=None, step=1.0)
+                power_w = ib_c4.number_input("Average Power Draw (W)*", min_value=0.5, value=None, step=0.5)
+                dim = ib_c5.text_input("Dimensions (mm)*", value="", placeholder="100 x 80 x 25 mm")
+                best_for = st.text_input("Primary Workload / Best For*", value="")
+                new_entry = {
+                    "arch": arch, "compute": compute, "dim": dim, "weight": weight,
+                    "power_w": power_w, "price_egp": price_egp, "price_usd": price_usd,
+                    "best_for": best_for, "buy_url": buy_url
+                }
+                
+            submitted = st.form_submit_button("Add Component to Active Session")
+            if submitted:
+                missing_fields = []
+                if not new_comp_name.strip(): missing_fields.append("Component Model Name")
+                if not buy_url.strip(): missing_fields.append("Vendor URL")
+                if price_egp is None: missing_fields.append("Price (EGP)")
+                if price_usd is None: missing_fields.append("Price (USD)")
+                for key, val in new_entry.items():
+                    if key not in ["notes", "ducted"]:
+                        if val is None or val == "" or val == []:
+                            missing_fields.append(key.replace("_", " ").title())
+                if missing_fields:
+                    st.error(f"❌ **Validation Failed!** Please fill in the following required fields: {', '.join(missing_fields)}")
+                else:
+                    st.session_state[target_category][new_comp_name.strip()] = new_entry
+                    st.session_state.admin_notify = f"✅ Added '{new_comp_name.strip()}' to {target_category} successfully!"
+                    st.rerun()
+
+        # ------------------------------------------
+        # 2. EDIT COMPONENT SECTION
+        # ------------------------------------------
+        st.markdown("---")
+        st.markdown("### Edit Existing Component")
+        st.caption("Select a component to modify its properties.")
+        edit_category = st.selectbox("Category to Edit From:", add_categories, key="edit_cat")
+        edit_available_items = list(st.session_state[edit_category].keys())
+        if edit_available_items:
+            item_to_edit = st.selectbox("Select Component to Edit:", edit_available_items, key="edit_item")
+            cur_data = st.session_state[edit_category][item_to_edit]
+            with st.form("edit_part_form", clear_on_submit=False):
+                st.markdown("**General Information**")
+                e_r1_c1, e_r1_c2 = st.columns([2, 2])
+                edit_comp_name = e_r1_c1.text_input("Component Model Name*", value=item_to_edit)
+                edit_url = e_r1_c2.text_input("Vendor / Purchase URL*", value=cur_data.get("buy_url", ""))
+                e_r2_c1, e_r2_c2 = st.columns(2)
+                edit_price_egp = e_r2_c1.number_input("Price (EGP)*", min_value=0.0, value=float(cur_data.get("price_egp", 0.0)), step=50.0)
+                edit_price_usd = e_r2_c2.number_input("Price (USD)*", min_value=0.0, value=float(cur_data.get("price_usd", 0.0)), step=1.0)
+                st.markdown("---")
+                st.markdown(f"**{edit_category} Specifications**")
+                
+                edit_entry = {}
+                if edit_category == "MOTORS":
+                    em_c1, em_c2, em_c3 = st.columns(3)
+                    e_weight = em_c1.number_input("Weight (g)*", min_value=0.1, value=float(cur_data.get("weight", 30.0)), step=0.5)
+                    e_thrust = em_c2.number_input("Max Thrust (g)*", min_value=1.0, value=float(cur_data.get("thrust", 1200.0)), step=10.0)
+                    e_kv = em_c3.number_input("KV Rating*", min_value=100, value=int(cur_data.get("kv", 1800)), step=50)
+                    em_c4, em_c5, em_c6 = st.columns(3)
+                    e_stator = em_c4.text_input("Stator Size*", value=cur_data.get("stator", ""))
+                    e_prop = em_c5.text_input("Supported Propeller Size*", value=cur_data.get("prop", ""))
+                    e_eff = em_c6.number_input("Hover Efficiency (g/W)*", min_value=1.0, value=float(cur_data.get("efficiency_hover_gw", 7.0)), step=0.1)
+                    em_c7, em_c8 = st.columns([2, 1])
+                    e_source = em_c7.text_input("Source / Retailer Type*", value=cur_data.get("source", ""))
+                    e_cells = em_c8.multiselect("Supported Cell Counts (S)*", options=[1, 2, 3, 4, 5, 6, 8], default=cur_data.get("cells", []))
+                    e_notes = st.text_input("Engineering Notes (Optional)", value=cur_data.get("notes", ""))
+                    edit_entry = {
+                        "stator": e_stator, "weight": e_weight, "kv": int(e_kv), "cells": e_cells,
+                        "prop": e_prop, "thrust": e_thrust, "source": e_source, "price_egp": edit_price_egp,
+                        "price_usd": edit_price_usd, "efficiency_hover_gw": e_eff, "notes": e_notes, "buy_url": edit_url
+                    }
+                elif edit_category == "FRAMES":
+                    ef_c1, ef_c2, ef_c3 = st.columns(3)
+                    e_wheelbase_mm = ef_c1.number_input("Wheelbase (mm)*", min_value=50, value=int(cur_data.get("wheelbase_mm", 330)), step=10)
+                    e_weight_g = ef_c2.number_input("Bare Frame Weight (g)*", min_value=1.0, value=float(cur_data.get("weight_g", 150.0)), step=5.0)
+                    e_payload_limit_g = ef_c3.number_input("Max Structural Payload (g)*", min_value=10.0, value=float(cur_data.get("payload_limit_g", 400.0)), step=10.0)
+                    ef_c4, ef_c5, ef_c6 = st.columns(3)
+                    e_motor_count = ef_c4.number_input("Motor Count*", min_value=3, max_value=8, value=int(cur_data.get("motor_count", 4)), step=1)
+                    e_max_prop = ef_c5.text_input("Max Propeller Size*", value=cur_data.get("max_prop", ""))
+                    e_ducted = ef_c6.checkbox("Enclosed / Ducted Props?", value=bool(cur_data.get("ducted", False)))
+                    e_notes = st.text_input("Engineering Notes (Optional)", value=cur_data.get("notes", ""))
+                    edit_entry = {
+                        "wheelbase_mm": int(e_wheelbase_mm), "weight_g": e_weight_g, "payload_limit_g": e_payload_limit_g,
+                        "motor_count": int(e_motor_count), "max_prop": e_max_prop, "ducted": e_ducted,
+                        "price_egp": edit_price_egp, "price_usd": edit_price_usd, "notes": e_notes, "buy_url": edit_url
+                    }
+                elif edit_category == "BATTERIES":
+                    eb_c1, eb_c2, eb_c3 = st.columns(3)
+                    e_cells_count = eb_c1.number_input("Cell Count (S)*", min_value=1, max_value=12, value=int(cur_data.get("cells", 4)), step=1)
+                    e_mah = eb_c2.number_input("Capacity (mAh)*", min_value=100, value=int(cur_data.get("mah", 4000)), step=100)
+                    e_voltage = eb_c3.number_input("Nominal Voltage (V)*", min_value=1.0, value=float(cur_data.get("voltage", 14.8)), step=0.1)
+                    eb_c4, eb_c5, eb_c6 = st.columns(3)
+                    e_batt_weight_g = eb_c4.number_input("Weight (g)*", min_value=1.0, value=float(cur_data.get("weight_g", 250.0) or 250.0), step=5.0)
+                    e_wh = eb_c5.number_input("Watt-Hours (Wh)*", min_value=1.0, value=float(cur_data.get("wh", 50.0)), step=0.5)
+                    e_c_rating = eb_c6.number_input("C-Rating*", min_value=1, value=int(cur_data.get("c_rating", 40)), step=5)
+                    eb_c7, eb_c8 = st.columns(2)
+                    e_dimensions = eb_c7.text_input("Dimensions (L x W x H mm)*", value=cur_data.get("dimensions", ""))
+                    e_notes = eb_c8.text_input("Engineering Notes (Optional)", value=cur_data.get("notes", ""))
+                    edit_entry = {
+                        "cells": int(e_cells_count), "mah": int(e_mah), "weight_g": e_batt_weight_g,
+                        "c_rating": int(e_c_rating), "voltage": e_voltage, "wh": e_wh,
+                        "price_egp": edit_price_egp, "price_usd": edit_price_usd,
+                        "dimensions": e_dimensions, "notes": e_notes, "buy_url": edit_url
+                    }
+                elif edit_category == "FLIGHT_CONTROLLERS":
+                    efc_c1, efc_c2 = st.columns(2)
+                    e_mcu = efc_c1.text_input("MCU Model*", value=cur_data.get("mcu", ""))
+                    e_fc_weight = efc_c2.number_input("Weight (g)*", min_value=0.5, value=float(cur_data.get("weight", 10.0)), step=0.5)
+                    efc_c3, efc_c4 = st.columns(2)
+                    e_dim = efc_c3.text_input("Dimensions (mm)*", value=cur_data.get("dim", ""))
+                    e_firmware = efc_c4.text_input("Supported Firmware*", value=cur_data.get("firmware", ""))
+                    e_notes = st.text_input("Engineering Notes (Optional)", value=cur_data.get("notes", ""))
+                    edit_entry = {
+                        "mcu": e_mcu, "weight": e_fc_weight, "dim": e_dim, "firmware": e_firmware,
+                        "price_egp": edit_price_egp, "price_usd": edit_price_usd, "notes": e_notes, "buy_url": edit_url
+                    }
+                elif edit_category == "SBCS":
+                    es_c1, es_c2, es_c3 = st.columns(3)
+                    e_cpu = es_c1.text_input("Processor / Memory*", value=cur_data.get("cpu", ""))
+                    e_ai_tops = es_c2.number_input("AI TOPS*", min_value=0.0, value=float(cur_data.get("ai_tops", 0.0)), step=1.0)
+                    e_power_w = es_c3.number_input("Average Power Draw (W)*", min_value=0.1, value=float(cur_data.get("power_w", 5.0)), step=0.5)
+                    es_c4, es_c5 = st.columns(2)
+                    e_sbc_weight = es_c4.number_input("Weight (g)*", min_value=1.0, value=float(cur_data.get("weight", 45.0)), step=1.0)
+                    e_dim = es_c5.text_input("Dimensions (mm)*", value=cur_data.get("dim", ""))
+                    e_best_for = st.text_input("Primary Workload / Best For*", value=cur_data.get("best_for", ""))
+                    edit_entry = {
+                        "cpu": e_cpu, "ai_tops": e_ai_tops, "weight": e_sbc_weight, "dim": e_dim,
+                        "power_w": e_power_w, "price_egp": edit_price_egp, "price_usd": edit_price_usd,
+                        "best_for": e_best_for, "buy_url": edit_url
+                    }
+                elif edit_category == "INTEGRATED_BOARDS":
+                    eib_c1, eib_c2 = st.columns(2)
+                    e_arch = eib_c1.text_input("Architecture Type*", value=cur_data.get("arch", ""))
+                    e_compute = eib_c2.text_input("Onboard Compute Engine*", value=cur_data.get("compute", ""))
+                    eib_c3, eib_c4, eib_c5 = st.columns(3)
+                    e_ib_weight = eib_c3.number_input("Weight (g)*", min_value=1.0, value=float(cur_data.get("weight", 100.0)), step=1.0)
+                    e_ib_power_w = eib_c4.number_input("Average Power Draw (W)*", min_value=0.5, value=float(cur_data.get("power_w", 10.0)), step=0.5)
+                    e_dim = eib_c5.text_input("Dimensions (mm)*", value=cur_data.get("dim", ""))
+                    e_best_for = st.text_input("Primary Workload / Best For*", value=cur_data.get("best_for", ""))
+                    edit_entry = {
+                        "arch": e_arch, "compute": e_compute, "dim": e_dim, "weight": e_ib_weight,
+                        "power_w": e_ib_power_w, "price_egp": edit_price_egp, "price_usd": edit_price_usd,
+                        "best_for": e_best_for, "buy_url": edit_url
+                    }
+                    
+                edit_submitted = st.form_submit_button("Save Changes to Active Session")
+                if edit_submitted:
+                    missing_fields = []
+                    if not edit_comp_name.strip(): missing_fields.append("Component Model Name")
+                    if not edit_url.strip(): missing_fields.append("Vendor URL")
+                    for key, val in edit_entry.items():
+                        if key not in ["notes", "ducted"]:
+                            if val is None or val == "" or val == []:
+                                missing_fields.append(key.replace("_", " ").title())
+                    if missing_fields:
+                        st.error(f"❌ **Validation Failed!** Please fill in: {', '.join(missing_fields)}")
+                    else:
+                        clean_name = edit_comp_name.strip()
+                        if clean_name != item_to_edit:
+                            st.session_state[edit_category].pop(item_to_edit, None)
+                        st.session_state[edit_category][clean_name] = edit_entry
+                        st.session_state.admin_notify = f"✅ Updated '{clean_name}' successfully!"
+                        st.rerun()
+        else:
+            st.info(f"No components available to edit in {edit_category}.")
+
+        # ------------------------------------------
+        # 3. REMOVE COMPONENT SECTION
+        # ------------------------------------------
+        st.markdown("---")
+        st.markdown("### Remove Existing Component")
+        st.caption("Select a category and choose a component to delete from the active database.")
+        del_category = st.selectbox("Category to Delete From:", add_categories, key="del_cat")
+        available_items = list(st.session_state[del_category].keys())
+        if available_items:
+            del_c1, del_c2 = st.columns([3, 1], gap="small")
+            with del_c1:
+                item_to_delete = st.selectbox("Select Component to Remove:", available_items, label_visibility="collapsed")
+            with del_c2:
+                if st.button("🗑️ Delete Component", use_container_width=True):
+                    st.session_state[del_category].pop(item_to_delete, None)
+                    st.session_state.admin_notify = f"✅ Removed '{item_to_delete}' from {del_category} successfully."
+                    st.rerun()
+        else:
+            st.info(f"No components found in {del_category}.")
+
+        # ------------------------------------------
+        # 4. CLOUD REPOSITORY SYNC
+        # ------------------------------------------
         st.markdown("---")
         st.markdown("#### Cloud Repository Sync")
         st.caption("Push additions, edits, or removals permanently to the JSON file on GitHub.")
@@ -682,7 +727,6 @@ with tab_combinations:
     st.subheader("Explore All Valid Component Combinations")
     st.caption("This tool computes every possible combination of frames, motors, batteries, and avionics based on your database, but only lists builds that strictly pass all physical safety and power checks.")
 
-    # Show persistent success/error messages from saving/deleting presets
     if "combo_notify" in st.session_state:
         st.success(st.session_state.combo_notify)
         del st.session_state.combo_notify
@@ -844,7 +888,7 @@ with tab_combinations:
                 if selected_preset != "Custom" and selected_preset in st.session_state.WEIGHT_PRESETS:
                     del st.session_state.WEIGHT_PRESETS[selected_preset]
                     st.session_state.selected_preset_name = "Custom"
-                    st.session_state.combo_notify = f"🗑️ Preset '{selected_preset}' deleted!"
+                    st.session_state.combo_notify = f"🗑️ Preset '{selected_preset}' deleted! Commit to GitHub in the Admin tab to remove it permanently."
                     st.rerun()
 
         st.markdown("---")

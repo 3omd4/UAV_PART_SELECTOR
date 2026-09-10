@@ -1,6 +1,6 @@
 import streamlit as st
 import json
-from tabs import catalogs, builder, admin, combinations, flight_envelope
+from tabs import catalogs, builder, admin, combinations, flight_envelope, pinout_mapper
 
 # Restored the corrupted page configuration and missing quotes
 st.set_page_config(
@@ -12,6 +12,7 @@ st.set_page_config(
 # ==========================================
 # DATABASE & SESSION INITIALIZATION
 # ==========================================
+
 # Removed the unused "WEIGHT_PRESETS" category to prevent memory bloat
 CATEGORIES = ["MOTORS", "FLIGHT_CONTROLLERS", "SBCS", "INTEGRATED_BOARDS", "FRAMES", "BATTERIES"]
 
@@ -33,8 +34,8 @@ for cat in CATEGORIES:
 st.title("Indoor UAV Components List & Builder")
 st.caption("Systems engineering evaluator for localized decentralized SLAM & RF/RSSI mapping platforms.")
 
-tab_catalogs, tab_builder, tab_admin, tab_combinations, tab_envelope = st.tabs([
-    "Component Catalogs", "Drone Builder", "Admin (Add Parts)", "Valid Combinations", "Flight Envelope"
+tab_catalogs, tab_builder, tab_admin, tab_combinations, tab_envelope, tab_pinout = st.tabs([
+    "Component Catalogs", "Drone Builder", "Admin (Add Parts)", "Valid Combinations", "Flight Envelope", "Pinout Mapper"
 ])
 
 # Route each tab to its respective module function
@@ -48,3 +49,5 @@ with tab_combinations:
     combinations.render_combinations_tab()
 with tab_envelope:
     flight_envelope.render_flight_envelope_tab()
+with tab_pinout:
+    pinout_mapper.render_pinout_mapper_tab()

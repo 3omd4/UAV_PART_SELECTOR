@@ -23,12 +23,12 @@ def render_combinations_tab():
     INTEGRATED_BOARDS = st.session_state.get("INTEGRATED_BOARDS", {})
     
     st.subheader("Explore All Valid Component Combinations")
-    st.caption("This tool computes every possible permutation of your hardware database. It filters out electrically and structurally unsafe builds, then ranks the surviving configurations using a dynamic fitness score based on your mission priorities.")
+    st.caption("This tool computes every possible permutation of your hardware database. It guarantees zero Red Warning builds (structurally or electrically unsafe). You can optionally filter out Yellow Warning builds (operational edge cases).")
     
     col_payload, col_weights = st.columns([1, 1], gap="large")
     
     with col_payload:
-        st.markdown("#### 1. Standard Payload")
+        st.markdown("#### 1. Payload & Strict Filtering")
         combo_esp32 = st.checkbox("ESP32-S3 SDR Sniffer (+25g, 1.5W)", value=True, key="combo_esp32_key")
         combo_lidar = st.selectbox("Perception Sensor:", [
             "Lightweight 2D LiDAR (~45g, 1.5W)",
@@ -36,6 +36,13 @@ def render_combinations_tab():
             "Optical Flow + Downward ToF (~15g, 0.5W)",
             "None (Pre-mapped / MoCap) (0g, 0W)"
         ], key="combo_lidar_key")
+        
+        st.markdown("---")
+        strict_mode = st.checkbox(
+            "🛡️ **Strict Operational Mode (Zero Warnings)**", 
+            value=False, 
+            help="Hides builds with Yellow operational warnings (e.g., TWR > 4.5, open propellers, wheelbase > 400mm, or throttle extremes)."
+        )
         
     with col_weights:
         st.markdown("#### 2. Mission Profile Scoring")
@@ -61,7 +68,6 @@ def render_combinations_tab():
         sensor_power += 0.5
         
     def evaluate_combination(frame_name, motor_name, battery_name, fc_name, sbc_name, int_board_name):
-        """Helper function to calculate stats and evaluate physical validity."""
         frame = FRAMES[frame_name]
         motor = MOTORS[motor_name]
         battery = BATTERIES[battery_name]
@@ -96,14 +102,12 @@ def render_combinations_tab():
         motor_total_cost_egp = motor.get("price_egp", 0) * num_motors
         total_cost_egp = frame.get("price_egp", 0) + motor_total_cost_egp + 1500.0 + fc_price_egp + sbc_price_egp + batt_price_egp
         
-        # Physics calculations
         hover_mech_power_w = auw_g / motor.get("efficiency_hover_gw", 1.0)
         total_elec_power_w = sbc_power_w + sensor_power + 3.0
         total_hover_power_w = hover_mech_power_w + total_elec_power_w
         usable_wh = battery.get("wh", 0) * 0.85
         flight_time_minutes = (usable_wh / total_hover_power_w) * 60.0 if total_hover_power_w > 0 else 0.0
         
-        # C-Rating and electrical limit checks
         batt_voltage = battery.get("voltage", 1.0) if battery.get("voltage", 1.0) > 0 else 1.0
         batt_max_discharge_amps = (battery.get("mah", 0) / 1000.0) * battery.get("c_rating", 1)
         total_peak_system_amps = ((motor.get("thrust", 0) / 3.0) / batt_voltage * num_motors) + (total_elec_power_w / batt_voltage)
@@ -111,8 +115,9 @@ def render_combinations_tab():
         hover_throttle_pct = (auw_g / total_max_thrust_g) * 100 if total_max_thrust_g > 0 else 100.0
 
         # ------------------------------------------
-        # HARD CONSTRAINTS (Safety Filters)
+        # HARD CONSTRAINTS (Zero Red Warnings Guarantee)
         # ------------------------------------------
+        # Explicit rejection for any combination that would trigger a red error in Builder.py
         if battery.get("cells") not in motor.get("cells", []):
             return None
         if total_payload_weight > frame.get("payload_limit_g", 0):
@@ -121,8 +126,24 @@ def render_combinations_tab():
             return None
         if total_peak_system_amps > batt_max_discharge_amps:
             return None
-        if hover_throttle_pct > 70.0:
-            return None
+
+        # ------------------------------------------
+        # OPERATIONAL CONSTRAINTS (Yellow Warnings Filter)
+        # ------------------------------------------
+        if strict_mode:
+            # Drops any build that triggers a yellow warning in Builder.py
+            if hover_throttle_pct > 65.0 or hover_throttle_pct < 20.0:
+                return None
+            if twr > 4.5:
+                return None
+            if frame.get("wheelbase_mm", 0) > 400:
+                return None
+            if not frame.get("ducted", True):
+                return None
+        else:
+            # Safety ceiling to drop fundamentally unflyable builds even in relaxed mode
+            if hover_throttle_pct > 75.0:
+                return None
 
         avionics_str = f"{fc_name} + {sbc_name}" if int_board_name is None else int_board_name
         
@@ -131,7 +152,7 @@ def render_combinations_tab():
             "Motor": motor_name,
             "Battery": battery_name,
             "Avionics": avionics_str,
-            "_FC": fc_name,  # Hidden metadata
+            "_FC": fc_name, 
             "_SBC": sbc_name,
             "_IntBoard": int_board_name,
             "Cost (EGP)": float(total_cost_egp),
@@ -162,7 +183,7 @@ def render_combinations_tab():
                 if res: valid_combos.append(res)
             
             if not valid_combos:
-                st.warning("No configurations satisfied the safety thresholds. Try relaxing payload weights or adding higher-spec components.")
+                st.warning("No configurations satisfied the safety thresholds. Try relaxing the payload or unchecking 'Strict Operational Mode'.")
                 if "solver_results" in st.session_state:
                     del st.session_state["solver_results"]
                 return
@@ -196,13 +217,11 @@ def render_combinations_tab():
             
             df_combos["Fitness Score"] = (df_combos["Fitness Score"] * 100).round(1)
             
-            # Sort highest scores to the top, add an explicit "Rank" column
             df_combos = df_combos.sort_values(by="Fitness Score", ascending=False).reset_index(drop=True)
             df_combos.index = df_combos.index + 1
             df_combos.index.name = "Rank"
             df_combos = df_combos.reset_index()
             
-            # Persist to session state
             st.session_state["solver_results"] = df_combos
 
     # ==========================================
@@ -214,15 +233,14 @@ def render_combinations_tab():
         st.markdown("### 🏆 Top Configurations")
         st.caption("👇 **Click directly on any row below** to instantly load that specific architecture into the Drone Builder tab.")
         
-        # Interactive DataFrame allowing single-row selection
         selection_event = st.dataframe(
             df_combos, 
             use_container_width=True,
             on_select="rerun",
-            selection_mode="single-row", # FIXED: Streamlit expects a hyphen
+            selection_mode="single-row",
             hide_index=True,
             column_config={
-                "_FC": None,  # Hidden metadata
+                "_FC": None, 
                 "_SBC": None,
                 "_IntBoard": None,
                 "Rank": st.column_config.NumberColumn("Rank", format="#%d"),
@@ -237,14 +255,12 @@ def render_combinations_tab():
             }
         )
         
-        # Capture the click event and extract the specific row index
         selected_rows = selection_event.get("selection", {}).get("rows", [])
         
         if selected_rows:
             selected_idx = selected_rows[0]
             row = df_combos.iloc[selected_idx]
             
-            # Package the metadata into a single session state dictionary
             st.session_state["builder_preset"] = {
                 "frame": row["Frame"],
                 "motor": row["Motor"],

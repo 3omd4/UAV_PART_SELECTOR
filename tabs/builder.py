@@ -32,31 +32,40 @@ def render_builder_tab():
     with col_inputs:
         st.markdown("### ⚙️ Hardware Configuration")
         
-        selected_frame_name = st.selectbox("1. Airframe Architecture:", list(FRAMES.keys()), index=0)
+        preset = st.session_state.get("builder_preset", {})
+
+        f_idx = list(FRAMES.keys()).index(preset["frame"]) if preset.get("frame") in FRAMES else 0
+        selected_frame_name = st.selectbox("1. Airframe Architecture:", list(FRAMES.keys()), index=f_idx)
         frame = FRAMES[selected_frame_name]
         
-        arch_choice = st.radio("2. Avionics Stack:", ["Modular (Separate FC + SBC)", "Integrated Board (All-in-One)"])
+        arch_idx = 1 if preset.get("int_board") else 0
+        arch_choice = st.radio("2. Avionics Stack:", ["Modular (Separate FC + SBC)", "Integrated Board (All-in-One)"], index=arch_idx)  
         fc_weight, fc_price_egp, fc_price_usd = 0.0, 0.0, 0.0
         sbc_weight, sbc_price_egp, sbc_price_usd, sbc_power_w = 0.0, 0.0, 0.0, 0.0
         int_board_name, fc_name, sbc_name = None, None, None
         
         if arch_choice == "Modular (Separate FC + SBC)":
-            fc_name = st.selectbox("Flight Controller:", list(FLIGHT_CONTROLLERS.keys()), index=1)
-            sbc_name = st.selectbox("Companion Computer (SBC):", list(SBCS.keys()), index=1)
+            fc_idx = list(FLIGHT_CONTROLLERS.keys()).index(preset["fc"]) if preset.get("fc") in FLIGHT_CONTROLLERS else 1
+            sbc_idx = list(SBCS.keys()).index(preset["sbc"]) if preset.get("sbc") in SBCS else 1
+            fc_name = st.selectbox("Flight Controller:", list(FLIGHT_CONTROLLERS.keys()), index=fc_idx)
+            sbc_name = st.selectbox("Companion Computer (SBC):", list(SBCS.keys()), index=sbc_idx)
             fc, sbc = FLIGHT_CONTROLLERS[fc_name], SBCS[sbc_name]
             fc_weight, fc_price_egp, fc_price_usd = fc["weight"], fc["price_egp"], fc["price_usd"]
             sbc_weight, sbc_price_egp, sbc_price_usd, sbc_power_w = sbc["weight"], sbc["price_egp"], sbc["price_usd"], sbc["power_w"]
             ai_tops = sbc["ai_tops"]
         else:
-            int_board_name = st.selectbox("Integrated Autonomy Board:", list(INTEGRATED_BOARDS.keys()), index=0)
+            int_idx = list(INTEGRATED_BOARDS.keys()).index(preset["int_board"]) if preset.get("int_board") in INTEGRATED_BOARDS else 0
+            int_board_name = st.selectbox("Integrated Autonomy Board:", list(INTEGRATED_BOARDS.keys()), index=int_idx)
             int_board = INTEGRATED_BOARDS[int_board_name]
             sbc_weight, sbc_price_egp, sbc_price_usd, sbc_power_w = int_board["weight"], int_board["price_egp"], int_board["price_usd"], int_board["power_w"]
             ai_tops = 15.0 if "VOXL" in int_board_name else (40.0 if "Jetson" in int_board_name else 0.0)
             
-        motor_name = st.selectbox("3. Brushless Motors:", list(MOTORS.keys()), index=2)
+        m_idx = list(MOTORS.keys()).index(preset["motor"]) if preset.get("motor") in MOTORS else 2
+        motor_name = st.selectbox("3. Brushless Motors:", list(MOTORS.keys()), index=m_idx)
         motor = MOTORS[motor_name]
-        
-        battery_name = st.selectbox("4. Energy Storage:", list(BATTERIES.keys()), index=0)
+
+        b_idx = list(BATTERIES.keys()).index(preset["battery"]) if preset.get("battery") in BATTERIES else 0
+        battery_name = st.selectbox("4. Energy Storage:", list(BATTERIES.keys()), index=b_idx)
         battery = BATTERIES[battery_name]
         
         lidar_cam = st.selectbox("5. Perception Sensor:", [

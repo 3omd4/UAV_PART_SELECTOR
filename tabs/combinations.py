@@ -131,9 +131,9 @@ def render_combinations_tab():
             "Motor": motor_name,
             "Battery": battery_name,
             "Avionics": avionics_str,
-            "_FC": fc_name,  # Hidden metadata for inter-tab communication
-            "_SBC": sbc_name, # Hidden metadata
-            "_IntBoard": int_board_name, # Hidden metadata
+            "_FC": fc_name,  # Hidden metadata
+            "_SBC": sbc_name,
+            "_IntBoard": int_board_name,
             "Cost (EGP)": float(total_cost_egp),
             "Hover Time (min)": float(flight_time_minutes),
             "TWR": float(twr),
@@ -163,7 +163,6 @@ def render_combinations_tab():
             
             if not valid_combos:
                 st.warning("No configurations satisfied the safety thresholds. Try relaxing payload weights or adding higher-spec components.")
-                # Clear previous results if new constraints yield 0
                 if "solver_results" in st.session_state:
                     del st.session_state["solver_results"]
                 return
@@ -196,26 +195,37 @@ def render_combinations_tab():
             ) / total_weight
             
             df_combos["Fitness Score"] = (df_combos["Fitness Score"] * 100).round(1)
-            df_combos = df_combos.sort_values(by="Fitness Score", ascending=False).reset_index(drop=True)
             
-            # Persist the dataframe into session state to prevent UI reset on subsequent clicks
+            # Sort highest scores to the top, add an explicit "Rank" column
+            df_combos = df_combos.sort_values(by="Fitness Score", ascending=False).reset_index(drop=True)
+            df_combos.index = df_combos.index + 1
+            df_combos.index.name = "Rank"
+            df_combos = df_combos.reset_index()
+            
+            # Persist to session state
             st.session_state["solver_results"] = df_combos
 
     # ==========================================
-    # DISPLAY CACHED RESULTS & INTER-TAB EXPORT
+    # DISPLAY CACHED RESULTS & ROW-CLICK LOGIC
     # ==========================================
     if "solver_results" in st.session_state:
         df_combos = st.session_state["solver_results"]
         
-        st.success(f"✅ Solver extracted {len(df_combos)} viable architectures passing all aerospace and electrical limits.")
+        st.markdown("### 🏆 Top Configurations")
+        st.caption("👇 **Click directly on any row below** to instantly load that specific architecture into the Drone Builder tab.")
         
-        st.dataframe(
+        # Interactive DataFrame allowing single-row selection
+        selection_event = st.dataframe(
             df_combos, 
             use_container_width=True,
+            on_select="rerun",
+            selection_mode="single_row",
+            hide_index=True,
             column_config={
-                "_FC": None,  # Hide metadata columns from the UI
+                "_FC": None,  # Hidden metadata
                 "_SBC": None,
                 "_IntBoard": None,
+                "Rank": st.column_config.NumberColumn("Rank", format="#%d"),
                 "Fitness Score": st.column_config.ProgressColumn("Fitness Score", format="%d%%", min_value=0, max_value=100),
                 "Cost (EGP)": st.column_config.NumberColumn("Est. Cost", format="EGP %.0f"),
                 "Hover Time (min)": st.column_config.NumberColumn("Hover Time", format="%.1f min"),
@@ -227,15 +237,12 @@ def render_combinations_tab():
             }
         )
         
-        st.markdown("### 📥 Load Architecture to Builder")
-        st.caption("Select a ranked build from the table above to seamlessly load it into the Drone Builder tab for deep physics analysis.")
+        # Capture the click event and extract the specific row index
+        selected_rows = selection_event.get("selection", {}).get("rows", [])
         
-        # UI for selecting a build to export
-        build_options = [f"Rank {i+1}: {row['Frame']} + {row['Motor']} ({row['Fitness Score']}%)" for i, row in df_combos.iterrows()]
-        selected_build_idx = st.selectbox("Select Target Build:", range(len(build_options)), format_func=lambda x: build_options[x])
-        
-        if st.button("Load Selected Build into Drone Builder", type="secondary"):
-            row = df_combos.iloc[selected_build_idx]
+        if selected_rows:
+            selected_idx = selected_rows[0]
+            row = df_combos.iloc[selected_idx]
             
             # Package the metadata into a single session state dictionary
             st.session_state["builder_preset"] = {
@@ -246,4 +253,5 @@ def render_combinations_tab():
                 "sbc": row["_SBC"],
                 "int_board": row["_IntBoard"]
             }
-            st.success("✅ **Architecture successfully locked in!** Switch to the 'Drone Builder' tab to review the Live Physics Engine.")
+            
+            st.success(f"✅ **Rank #{row['Rank']} Architecture locked in!** Switch to the 'Drone Builder' tab to review the Live Physics Engine.")

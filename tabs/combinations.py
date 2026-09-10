@@ -121,7 +121,7 @@ def render_combinations_tab():
             return None
         if total_peak_system_amps > batt_max_discharge_amps:
             return None
-        if hover_throttle_pct > 70.0:  # Severely underpowered builds
+        if hover_throttle_pct > 70.0:
             return None
 
         avionics_str = f"{fc_name} + {sbc_name}" if int_board_name is None else int_board_name
@@ -131,6 +131,9 @@ def render_combinations_tab():
             "Motor": motor_name,
             "Battery": battery_name,
             "Avionics": avionics_str,
+            "_FC": fc_name,  # Hidden metadata for inter-tab communication
+            "_SBC": sbc_name, # Hidden metadata
+            "_IntBoard": int_board_name, # Hidden metadata
             "Cost (EGP)": float(total_cost_egp),
             "Hover Time (min)": float(flight_time_minutes),
             "TWR": float(twr),
@@ -143,7 +146,6 @@ def render_combinations_tab():
     st.divider()
     
     if st.button("🚀 Execute Combinatorial Solver", type="primary", use_container_width=True):
-        # Graceful failure if dictionaries are empty
         if not all([FRAMES, MOTORS, BATTERIES, FLIGHT_CONTROLLERS, SBCS]):
             st.error("Incomplete database. Ensure at least one component exists in Frames, Motors, Batteries, FCs, and SBCs before running the solver.")
             return
@@ -151,18 +153,19 @@ def render_combinations_tab():
         with st.spinner("Iterating through physical permutations and applying safety constraints..."):
             valid_combos = []
             
-            # Modular iterations
             for f, m, b, fc, sbc in itertools.product(FRAMES.keys(), MOTORS.keys(), BATTERIES.keys(), FLIGHT_CONTROLLERS.keys(), SBCS.keys()):
                 res = evaluate_combination(f, m, b, fc, sbc, None)
                 if res: valid_combos.append(res)
                     
-            # Integrated iterations
             for f, m, b, int_bd in itertools.product(FRAMES.keys(), MOTORS.keys(), BATTERIES.keys(), INTEGRATED_BOARDS.keys()):
                 res = evaluate_combination(f, m, b, None, None, int_bd)
                 if res: valid_combos.append(res)
             
             if not valid_combos:
-                st.warning("No configurations satisfied the safety thresholds. Try relaxing payload weights or adding higher-spec components to the database.")
+                st.warning("No configurations satisfied the safety thresholds. Try relaxing payload weights or adding higher-spec components.")
+                # Clear previous results if new constraints yield 0
+                if "solver_results" in st.session_state:
+                    del st.session_state["solver_results"]
                 return
                 
             df_combos = pd.DataFrame(valid_combos)
@@ -171,7 +174,6 @@ def render_combinations_tab():
             # DYNAMIC FITNESS SCORING
             # ==========================================
             def normalize(series, invert=False):
-                """Min-max normalization. If invert=True, lower values score closer to 1.0."""
                 if series.max() == series.min():
                     return 0.5
                 if invert:
@@ -179,14 +181,13 @@ def render_combinations_tab():
                 return (series - series.min()) / (series.max() - series.min())
             
             norm_time = normalize(df_combos["Hover Time (min)"])
-            norm_cost = normalize(df_combos["Cost (EGP)"], invert=True)  # Lower is better
+            norm_cost = normalize(df_combos["Cost (EGP)"], invert=True)
             norm_ai = normalize(df_combos["AI TOPS"])
             norm_twr = normalize(df_combos["TWR"])
             
             total_weight = w_time + w_cost + w_ai + w_twr
-            if total_weight == 0: total_weight = 1.0  # Prevent division by zero
+            if total_weight == 0: total_weight = 1.0 
             
-            # Apply weighted sum formula
             df_combos["Fitness Score"] = (
                 (norm_time * w_time) + 
                 (norm_cost * w_cost) + 
@@ -194,26 +195,55 @@ def render_combinations_tab():
                 (norm_twr * w_twr)
             ) / total_weight
             
-            # Convert to a 0-100 percentage
             df_combos["Fitness Score"] = (df_combos["Fitness Score"] * 100).round(1)
-            
-            # Sort highest scores to the top
             df_combos = df_combos.sort_values(by="Fitness Score", ascending=False).reset_index(drop=True)
             
-            st.success(f"✅ Solver completed: Extracted {len(df_combos)} viable architectures passing all aerospace and electrical limits.")
+            # Persist the dataframe into session state to prevent UI reset on subsequent clicks
+            st.session_state["solver_results"] = df_combos
+
+    # ==========================================
+    # DISPLAY CACHED RESULTS & INTER-TAB EXPORT
+    # ==========================================
+    if "solver_results" in st.session_state:
+        df_combos = st.session_state["solver_results"]
+        
+        st.success(f"✅ Solver extracted {len(df_combos)} viable architectures passing all aerospace and electrical limits.")
+        
+        st.dataframe(
+            df_combos, 
+            use_container_width=True,
+            column_config={
+                "_FC": None,  # Hide metadata columns from the UI
+                "_SBC": None,
+                "_IntBoard": None,
+                "Fitness Score": st.column_config.ProgressColumn("Fitness Score", format="%d%%", min_value=0, max_value=100),
+                "Cost (EGP)": st.column_config.NumberColumn("Est. Cost", format="EGP %.0f"),
+                "Hover Time (min)": st.column_config.NumberColumn("Hover Time", format="%.1f min"),
+                "AUW (g)": st.column_config.NumberColumn("AUW", format="%.0f g"),
+                "TWR": st.column_config.NumberColumn("TWR", format="%.2f"),
+                "Hover Throttle (%)": st.column_config.NumberColumn("Throttle", format="%.1f%%"),
+                "Peak Draw (A)": st.column_config.NumberColumn("Peak Draw", format="%.1f A"),
+                "AI TOPS": st.column_config.NumberColumn("Compute", format="%.1f TOPS")
+            }
+        )
+        
+        st.markdown("### 📥 Load Architecture to Builder")
+        st.caption("Select a ranked build from the table above to seamlessly load it into the Drone Builder tab for deep physics analysis.")
+        
+        # UI for selecting a build to export
+        build_options = [f"Rank {i+1}: {row['Frame']} + {row['Motor']} ({row['Fitness Score']}%)" for i, row in df_combos.iterrows()]
+        selected_build_idx = st.selectbox("Select Target Build:", range(len(build_options)), format_func=lambda x: build_options[x])
+        
+        if st.button("Load Selected Build into Drone Builder", type="secondary"):
+            row = df_combos.iloc[selected_build_idx]
             
-            # Format dataframe for presentation
-            st.dataframe(
-                df_combos, 
-                use_container_width=True,
-                column_config={
-                    "Fitness Score": st.column_config.ProgressColumn("Fitness Score", format="%d%%", min_value=0, max_value=100),
-                    "Cost (EGP)": st.column_config.NumberColumn("Est. Cost", format="EGP %.0f"),
-                    "Hover Time (min)": st.column_config.NumberColumn("Hover Time", format="%.1f min"),
-                    "AUW (g)": st.column_config.NumberColumn("AUW", format="%.0f g"),
-                    "TWR": st.column_config.NumberColumn("TWR", format="%.2f"),
-                    "Hover Throttle (%)": st.column_config.NumberColumn("Throttle", format="%.1f%%"),
-                    "Peak Draw (A)": st.column_config.NumberColumn("Peak Draw", format="%.1f A"),
-                    "AI TOPS": st.column_config.NumberColumn("Compute", format="%.1f TOPS")
-                }
-            )
+            # Package the metadata into a single session state dictionary
+            st.session_state["builder_preset"] = {
+                "frame": row["Frame"],
+                "motor": row["Motor"],
+                "battery": row["Battery"],
+                "fc": row["_FC"],
+                "sbc": row["_SBC"],
+                "int_board": row["_IntBoard"]
+            }
+            st.success("✅ **Architecture successfully locked in!** Switch to the 'Drone Builder' tab to review the Live Physics Engine.")

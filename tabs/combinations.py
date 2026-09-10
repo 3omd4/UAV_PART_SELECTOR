@@ -117,7 +117,6 @@ def render_combinations_tab():
         # ------------------------------------------
         # HARD CONSTRAINTS (Zero Red Warnings Guarantee)
         # ------------------------------------------
-        # Explicit rejection for any combination that would trigger a red error in Builder.py
         if battery.get("cells") not in motor.get("cells", []):
             return None
         if total_payload_weight > frame.get("payload_limit_g", 0):
@@ -131,7 +130,6 @@ def render_combinations_tab():
         # OPERATIONAL CONSTRAINTS (Yellow Warnings Filter)
         # ------------------------------------------
         if strict_mode:
-            # Drops any build that triggers a yellow warning in Builder.py
             if hover_throttle_pct > 65.0 or hover_throttle_pct < 20.0:
                 return None
             if twr > 4.5:
@@ -141,7 +139,6 @@ def render_combinations_tab():
             if not frame.get("ducted", True):
                 return None
         else:
-            # Safety ceiling to drop fundamentally unflyable builds even in relaxed mode
             if hover_throttle_pct > 75.0:
                 return None
 
@@ -223,6 +220,10 @@ def render_combinations_tab():
             df_combos = df_combos.reset_index()
             
             st.session_state["solver_results"] = df_combos
+            
+            # Clear any previously selected preset when generating a new matrix
+            if "builder_preset" in st.session_state:
+                del st.session_state["builder_preset"]
 
     # ==========================================
     # DISPLAY CACHED RESULTS & ROW-CLICK LOGIC
@@ -235,6 +236,7 @@ def render_combinations_tab():
         
         selection_event = st.dataframe(
             df_combos, 
+            key="combo_ranking_table", # ARCHITECTURAL FIX: Binds UI selection state to backend memory
             use_container_width=True,
             on_select="rerun",
             selection_mode="single-row",

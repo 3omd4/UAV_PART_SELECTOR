@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
+import math
 
 def process_catalog_df(db_dict, search_query):
     """Converts the session state dictionary to a DataFrame and applies global search."""
@@ -10,15 +12,20 @@ def process_catalog_df(db_dict, search_query):
     df.rename(columns={"index": "Model"}, inplace=True)
     
     # --- PYARROW SANITIZATION ---
-    # External datasets inject unknown columns (e.g., 'compliance', 'approx_price') 
-    # that contain mixed lists, ints, and strings, crashing PyArrow serialization.
+    # Safe null checker that does not trigger array-broadcasting ValueError
+    def is_scalar_nan(val):
+        return val is None or (isinstance(val, float) and math.isnan(val))
+
     for col in df.columns:
         if col == "cells":
-            # Streamlit's ListColumn strictly requires a list object
-            df[col] = df[col].apply(lambda x: x if isinstance(x, list) else [x] if pd.notnull(x) else [])
+            # Safely cast arrays/tuples to lists, wrap scalars, and ignore true nulls
+            df[col] = df[col].apply(
+                lambda x: list(x) if isinstance(x, (list, tuple, np.ndarray)) 
+                else ([] if is_scalar_nan(x) else [x])
+            )
         elif df[col].dtype == 'object':
-            # Force all other mixed-type object columns into safe strings
-            df[col] = df[col].apply(lambda x: str(x) if pd.notnull(x) else None)
+            # Force all mixed-type object columns into safe strings, completely bypassing pd.notnull
+            df[col] = df[col].apply(lambda x: None if is_scalar_nan(x) else str(x))
     
     # Apply search filter if query exists
     if search_query:
@@ -70,7 +77,7 @@ def render_catalogs_tab():
                     "notes": st.column_config.TextColumn("Engineering Notes", width="large"),
                     "source": None 
                 },
-                use_container_width=True, hide_index=True
+                width="stretch", hide_index=True
             )
         else:
             st.info("No motors found matching your search.")
@@ -92,7 +99,7 @@ def render_catalogs_tab():
                     "price_usd": st.column_config.NumberColumn("Cost (USD)", format="$%.2f"),
                     "buy_url": st.column_config.LinkColumn("Vendor", display_text="Link ↗")
                 },
-                use_container_width=True, hide_index=True
+                width="stretch", hide_index=True
             )
         else:
             st.info("No SBCs found matching your search.")
@@ -113,7 +120,7 @@ def render_catalogs_tab():
                     "price_usd": st.column_config.NumberColumn("Cost (USD)", format="$%.2f"),
                     "buy_url": st.column_config.LinkColumn("Vendor", display_text="Link ↗")
                 },
-                use_container_width=True, hide_index=True
+                width="stretch", hide_index=True
             )
         else:
             st.info("No Flight Controllers found matching your search.")
@@ -137,7 +144,7 @@ def render_catalogs_tab():
                     "price_usd": st.column_config.NumberColumn("Cost (USD)", format="$%.2f"),
                     "buy_url": st.column_config.LinkColumn("Vendor", display_text="Link ↗")
                 },
-                use_container_width=True, hide_index=True
+                width="stretch", hide_index=True
             )
         else:
             st.info("No Batteries found matching your search.")
@@ -160,7 +167,7 @@ def render_catalogs_tab():
                     "price_usd": st.column_config.NumberColumn("Cost (USD)", format="$%.2f"),
                     "buy_url": st.column_config.LinkColumn("Vendor", display_text="Link ↗")
                 },
-                use_container_width=True, hide_index=True
+                width="stretch", hide_index=True
             )
         else:
             st.info("No Airframes found matching your search.")
@@ -182,7 +189,7 @@ def render_catalogs_tab():
                     "price_usd": st.column_config.NumberColumn("Cost (USD)", format="$%.2f"),
                     "buy_url": st.column_config.LinkColumn("Vendor", display_text="Link ↗")
                 },
-                use_container_width=True, hide_index=True
+                width="stretch", hide_index=True
             )
         else:
             st.info("No Integrated Boards found matching your search.")

@@ -9,6 +9,18 @@ def process_catalog_df(db_dict, search_query):
     df = pd.DataFrame.from_dict(db_dict, orient="index").reset_index()
     df.rename(columns={"index": "Model"}, inplace=True)
     
+    # --- PYARROW SANITIZATION ---
+    # External datasets inject unknown columns (e.g., 'compliance', 'approx_price') 
+    # that contain mixed lists, ints, and strings, crashing PyArrow serialization.
+    for col in df.columns:
+        if col == "cells":
+            # Streamlit's ListColumn strictly requires a list object
+            df[col] = df[col].apply(lambda x: x if isinstance(x, list) else [x] if pd.notnull(x) else [])
+        elif df[col].dtype == 'object':
+            # Force all other mixed-type object columns into safe strings
+            df[col] = df[col].apply(lambda x: str(x) if pd.notnull(x) else None)
+    
+    # Apply search filter if query exists
     if search_query:
         mask = df.apply(lambda row: row.astype(str).str.contains(search_query, case=False).any(), axis=1)
         df = df[mask]
@@ -38,7 +50,6 @@ def render_catalogs_tab():
         "⚡ Batteries", "🛸 Airframes", "🛠️ Integrated Boards"
     ])
     
-    # Restored all truncated string configurations (Link ↗)
     with cat_tabs[0]:
         df_motors = process_catalog_df(MOTORS, search_query)
         if not df_motors.empty:

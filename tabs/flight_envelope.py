@@ -97,4 +97,6 @@ def render_flight_envelope_tab():
         with math2:
             st.markdown("**3. Practical Forward Velocity ($V_{forward}$)**")
             st.latex(r"V_{forward} = V_{pitch} \times \sin(\theta_{tilt}) \times \eta_{aero}")
-            st.markdown(f"**Result:** {max_pitch_speed_ms:.1f} m/s × $\sin({max_tilt_deg}^\circ)$ × {system_efficiency} = `{max_achievable_speed_ms:.1f} m/s`")
+            
+            # Double backslashes implemented to satisfy Python 3.12+ f-string standards
+            st.markdown(f"**Result:** {max_pitch_speed_ms:.1f} m/s × $\\sin({max_tilt_deg}^\\circ)$ × {system_efficiency} = `{max_achievable_speed_ms:.1f} m/s`")

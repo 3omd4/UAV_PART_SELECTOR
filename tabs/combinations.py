@@ -226,17 +226,17 @@ def render_combinations_tab():
                 del st.session_state["builder_preset"]
 
     # ==========================================
-    # DISPLAY CACHED RESULTS & ROW-CLICK LOGIC
+    # DISPLAY CACHED RESULTS & EXPLICIT LOAD BUTTON
     # ==========================================
     if "solver_results" in st.session_state:
         df_combos = st.session_state["solver_results"]
         
         st.markdown("### 🏆 Top Configurations")
-        st.caption("👇 **Click directly on any row below** to instantly load that specific architecture into the Drone Builder tab.")
+        st.caption("Select a row below to reveal the system loader tool.")
         
         selection_event = st.dataframe(
             df_combos, 
-            key="combo_ranking_table", # ARCHITECTURAL FIX: Binds UI selection state to backend memory
+            key="combo_ranking_table",
             use_container_width=True,
             on_select="rerun",
             selection_mode="single-row",
@@ -257,19 +257,24 @@ def render_combinations_tab():
             }
         )
         
-        selected_rows = selection_event.get("selection", {}).get("rows", [])
+        # Safely extract selection using Streamlit >= 1.35 attribute syntax
+        selected_rows = selection_event.selection.rows
         
         if selected_rows:
             selected_idx = selected_rows[0]
             row = df_combos.iloc[selected_idx]
             
-            st.session_state["builder_preset"] = {
-                "frame": row["Frame"],
-                "motor": row["Motor"],
-                "battery": row["Battery"],
-                "fc": row["_FC"],
-                "sbc": row["_SBC"],
-                "int_board": row["_IntBoard"]
-            }
+            st.markdown(f"**🎯 Targeted Configuration:** Rank `#{row['Rank']}` ({row['Frame']} + {row['Motor']})")
             
-            st.success(f"✅ **Rank #{row['Rank']} Architecture locked in!** Switch to the 'Drone Builder' tab to review the Live Physics Engine.")
+            # Explicit Commit Architecture
+            if st.button(f"📥 Lock in Rank #{row['Rank']} & Load into Drone Builder", type="primary", use_container_width=True):
+                st.session_state["builder_preset"] = {
+                    "frame": row["Frame"],
+                    "motor": row["Motor"],
+                    "battery": row["Battery"],
+                    "fc": row["_FC"],
+                    "sbc": row["_SBC"],
+                    "int_board": row["_IntBoard"]
+                }
+                
+                st.success(f"✅ **Architecture locked in!** Switch over to the 'Drone Builder' tab to review the Live Physics Engine.")

@@ -2,7 +2,6 @@ import streamlit as st
 import json
 from tabs import catalogs, builder, admin, combinations, flight_envelope, pinout_mapper
 
-# Restored the corrupted page configuration and missing quotes
 st.set_page_config(
     page_title="Indoor UAV Part list",
     page_icon="✈️",
@@ -12,18 +11,14 @@ st.set_page_config(
 # ==========================================
 # DATABASE & SESSION INITIALIZATION
 # ==========================================
-
-# Removed the unused "WEIGHT_PRESETS" category to prevent memory bloat
 CATEGORIES = ["MOTORS", "FLIGHT_CONTROLLERS", "SBCS", "INTEGRATED_BOARDS", "FRAMES", "BATTERIES"]
 
-# Load permanent component database from JSON file
 try:
     with open("custom_database.json", "r", encoding="utf-8") as f:
         db_from_file = json.load(f)
 except Exception:
     db_from_file = {}
 
-# Initialize session state for each catalog category
 for cat in CATEGORIES:
     if cat not in st.session_state:
         st.session_state[cat] = db_from_file.get(cat, {})
@@ -38,7 +33,6 @@ tab_catalogs, tab_builder, tab_admin, tab_combinations, tab_envelope, tab_pinout
     "Component Catalogs", "Drone Builder", "Admin (Add Parts)", "Valid Combinations", "Flight Envelope", "Pinout Mapper"
 ])
 
-# Route each tab to its respective module function
 with tab_catalogs:
     catalogs.render_catalogs_tab()
 with tab_builder:

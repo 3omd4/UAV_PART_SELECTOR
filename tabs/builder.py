@@ -98,11 +98,11 @@ def render_builder_tab():
     compute_and_fc_weight = fc_weight + sbc_weight
     total_payload_weight = compute_and_fc_weight + sensor_weight
     
-    batt_weight = battery["weight_g"] if battery["weight_g"] is not None else 0.0
-    batt_weight = battery["weight_g"] if battery["weight_g"] is not None else 0.0
-    batt_price_egp = battery["price_egp"] or 0.0
-    batt_price_usd = battery["price_usd"] or 0.0
-    auw_g = frame["weight_g"] + propulsion_weight + batt_weight + total_payload_weight
+    batt_weight = battery.get("weight_g") or battery.get("weight") or 0.0
+    batt_price_egp = battery.get("price_egp") or 0.0
+    batt_price_usd = battery.get("price_usd") or 0.0
+    frame_weight = frame.get("weight_g") or frame.get("weight") or 0.0
+    auw_g = frame_weight + propulsion_weight + batt_weight + total_payload_weight
     auw_kg = auw_g / 1000.0
     
     total_max_thrust_g = motor.get("thrust", 0) * num_motors
@@ -118,16 +118,21 @@ def render_builder_tab():
         
     batt_max_discharge_amps = (battery.get("mah", 0) / 1000.0) * battery.get("c_rating", 1)
     total_elec_power_w = sbc_power_w + sensor_power + 3.0
-    
     batt_voltage = battery.get("voltage", 1.0) if battery.get("voltage", 1.0) > 0 else 1.0
-    total_peak_system_amps = ((motor.get("thrust", 0) / 3.0) / batt_voltage * num_motors) + (total_elec_power_w / batt_voltage)
+    
+    # Priority for empirical bench data from UAS-Forge
+    empirical_motor_amps = motor.get("max_current_a", 0)
+    if empirical_motor_amps > 0:
+        total_peak_system_amps = (empirical_motor_amps * num_motors) + (total_elec_power_w / batt_voltage)
+    else:
+        total_peak_system_amps = ((motor.get("thrust", 0) / 3.0) / batt_voltage * num_motors) + (total_elec_power_w / batt_voltage)
 
     hover_mech_power_w = auw_g / motor.get("efficiency_hover_gw", 1.0)
     total_hover_power_w = hover_mech_power_w + total_elec_power_w
     flight_time_minutes = ((battery.get("wh", 0) * 0.85) / total_hover_power_w) * 60.0 if total_hover_power_w > 0 else 0.0
 
-    total_cost_egp = frame.get("price_egp", 0) + (motor.get("price_egp", 0) * num_motors) + 1500.0 + fc_price_egp + sbc_price_egp + (battery.get("price_egp", 0) or 0)
-    total_cost_usd = frame.get("price_usd", 0) + (motor.get("price_usd", 0) * num_motors) + 30.0 + fc_price_usd + sbc_price_usd + (battery.get("price_usd", 0) or 0)
+    total_cost_egp = frame.get("price_egp", 0) + (motor.get("price_egp", 0) * num_motors) + 1500.0 + fc_price_egp + sbc_price_egp + batt_price_egp
+    total_cost_usd = frame.get("price_usd", 0) + (motor.get("price_usd", 0) * num_motors) + 30.0 + fc_price_usd + sbc_price_usd + batt_price_usd
 
     # ==========================================
     # RIGHT COLUMN: PHYSICS & VALIDATION
@@ -142,7 +147,6 @@ def render_builder_tab():
         
         a1, a2, a3, a4 = st.columns(4)
         a1.metric("Hover Throttle", f"{hover_throttle_pct:.1f}%")
-        # Restored the corrupted unicode characters here
         a2.metric("Disk Loading", f"{disk_loading_kg_m2:.1f} kg/m²")
         a3.metric("Peak Current", f"{total_peak_system_amps:.1f} A")
         a4.metric("Total Cost", f"${total_cost_usd:,.0f}")
@@ -153,7 +157,7 @@ def render_builder_tab():
         tel1, tel2, tel3 = st.columns(3)
         with tel1:
             st.markdown("**Mass Breakdown (g)**")
-            st.write(f"- **Frame:** {frame.get('weight_g', 0)}")
+            st.write(f"- **Frame:** {frame_weight:.1f}")
             st.write(f"- **Propulsion:** {propulsion_weight:.1f}")
             st.write(f"- **Avionics:** {compute_and_fc_weight:.1f}")
             st.write(f"- **Sensors:** {sensor_weight:.1f}")
@@ -228,7 +232,6 @@ def render_builder_tab():
         if frame.get("wheelbase_mm", 0) > 400:
             st.warning(f"⚠️ **Spatial Footprint Caution:** Wheelbase ({frame.get('wheelbase_mm')}mm) exceeds typical 400mm indoor limits. Increases swarm collision risk.")
             
-        # New constraint: Evaluate indoor disk loading (turbulent downwash effect)
         if disk_loading_kg_m2 > 12.0:
             st.warning(f"⚠️ **High Disk Loading ({disk_loading_kg_m2:.1f} kg/m²):** High risk of severe indoor downwash. Can cause sensor dust scattering and ground-effect turbulence.")
 
@@ -244,7 +247,7 @@ def render_builder_tab():
     st.divider()
     st.markdown("### 🛒 Generated Bill of Materials (BoM)")
     bom_data = [
-        {"Component": "Frame", "Model": selected_frame_name, "Weight (g)": frame.get("weight_g", 0), "Cost (EGP)": frame.get("price_egp", 0), "Buy": frame.get("buy_url", "")},
+        {"Component": "Frame", "Model": selected_frame_name, "Weight (g)": frame_weight, "Cost (EGP)": frame.get("price_egp", 0), "Buy": frame.get("buy_url", "")},
         {"Component": f"Motors (x{num_motors})", "Model": motor_name, "Weight (g)": motor.get("weight", 0) * num_motors, "Cost (EGP)": motor.get("price_egp", 0) * num_motors, "Buy": motor.get("buy_url", "")},
         {"Component": "ESC & Wiring", "Model": "4-in-1 40A ESC", "Weight (g)": esc_wiring_weight, "Cost (EGP)": 1500.0, "Buy": "https://makerselectronics.com"},
         {"Component": "Battery", "Model": battery_name, "Weight (g)": batt_weight, "Cost (EGP)": batt_price_egp, "Buy": battery.get("buy_url", "")}

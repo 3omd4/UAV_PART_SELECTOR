@@ -25,7 +25,7 @@ def render_pinout_mapper_tab():
         st.markdown("### 🔌 Active Peripherals")
         st.caption("Toggle payload sensors to observe real-time port allocation.")
         
-        req_telem = not is_integrated  # If modular, we MUST have a MAVLink UART connection
+        req_telem = not is_integrated
         has_depth_cam = st.checkbox("Stereo VIO Depth Camera (RealSense D435i)", value=True)
         has_lidar = st.checkbox("2D LiDAR (RPLidar/LD06)", value=True)
         has_esp32 = st.checkbox("ESP32-S3 SDR Sniffer", value=True)
@@ -35,21 +35,28 @@ def render_pinout_mapper_tab():
 
         st.divider()
 
-        # Simulated I/O capacities based on standard aerospace hardware classes
+        # Dynamic capacity evaluation (combines Forge schema & hardware defaults)
         sys_io = {"USB_3": 0, "USB_2": 0, "UART": 0, "I2C": 0}
         
         if is_integrated:
             st.markdown(f"**Target:** {int_board_name}")
-            # Integrated boards generally have high I/O exposed
-            sys_io = {"USB_3": 2, "USB_2": 2, "UART": 4, "I2C": 2}
+            int_board = INTEGRATED_BOARDS.get(int_board_name, {})
+            sys_io = {
+                "USB_3": int_board.get("usb_3", 2),
+                "USB_2": int_board.get("usb_2", 2),
+                "UART": int_board.get("uarts", 4),
+                "I2C": int_board.get("i2c", 2)
+            }
         else:
             st.markdown(f"**Target SBC:** {sbc_name}")
             st.markdown(f"**Target FC:** {fc_name}")
-            # Baseline modular capacities
-            sys_io["USB_3"] = 2 if "Orin" in sbc_name or "Pi 5" in sbc_name else 0
-            sys_io["USB_2"] = 2 if "Zero" not in sbc_name else 1
-            sys_io["UART"] = 6 # Sum of typical FC + SBC UARTs
-            sys_io["I2C"] = 2
+            sbc = SBCS.get(sbc_name, {})
+            fc = FLIGHT_CONTROLLERS.get(fc_name, {})
+            
+            sys_io["USB_3"] = sbc.get("usb_3", 2 if "Orin" in str(sbc_name) or "Pi 5" in str(sbc_name) else 0)
+            sys_io["USB_2"] = sbc.get("usb_2", 2 if "Zero" not in str(sbc_name) else 1)
+            sys_io["UART"] = sbc.get("uarts", 2) + fc.get("uarts", 4)
+            sys_io["I2C"] = sbc.get("i2c", 1) + fc.get("i2c", 1)
 
         st.markdown("#### Total System Capacity")
         st.write(f"- **USB 3.0 Ports:** {sys_io['USB_3']}")
@@ -63,33 +70,28 @@ def render_pinout_mapper_tab():
         routing_table = []
         used_usb3, used_usb2, used_uart, used_i2c = 0, 0, 0, 0
         
-        # MAVLink Bridge
         if req_telem:
             routing_table.append({"Device": "SBC ↔ FC Bridge", "Protocol": "UART", "Bandwidth": "High (921600 baud)", "Status": "✅ Mapped"})
             used_uart += 1
             
-        # RC Receiver
         if has_rc:
             routing_table.append({"Device": "RC Receiver", "Protocol": "UART (RX only)", "Bandwidth": "Low", "Status": "✅ Mapped"})
             used_uart += 1
             
-        # GPS/Compass
         if has_gps:
             routing_table.append({"Device": "RTK GPS", "Protocol": "UART", "Bandwidth": "Medium (115200 baud)", "Status": "✅ Mapped"})
             routing_table.append({"Device": "Magnetometer", "Protocol": "I2C", "Bandwidth": "Low", "Status": "✅ Mapped"})
             used_uart += 1
             used_i2c += 1
             
-        # Depth Camera
         if has_depth_cam:
             if used_usb3 < sys_io["USB_3"]:
                 routing_table.append({"Device": "Stereo Depth Camera", "Protocol": "USB 3.0", "Bandwidth": "Extreme (5 Gbps)", "Status": "✅ Mapped"})
                 used_usb3 += 1
             else:
                 routing_table.append({"Device": "Stereo Depth Camera", "Protocol": "USB 3.0", "Bandwidth": "Extreme (5 Gbps)", "Status": "❌ Port Unavailable"})
-                used_usb3 += 1 # Intentionally increment to trigger the error check later
+                used_usb3 += 1
                 
-        # LiDAR
         if has_lidar:
             if used_usb2 < sys_io["USB_2"]:
                 routing_table.append({"Device": "2D LiDAR", "Protocol": "USB 2.0 (CP2102)", "Bandwidth": "Medium", "Status": "✅ Mapped"})
@@ -101,7 +103,6 @@ def render_pinout_mapper_tab():
                 routing_table.append({"Device": "2D LiDAR", "Protocol": "UART / USB 2.0", "Bandwidth": "Medium", "Status": "❌ Port Unavailable"})
                 used_uart += 1
                 
-        # ESP32
         if has_esp32:
             if used_uart < sys_io["UART"]:
                 routing_table.append({"Device": "ESP32 SDR Sniffer", "Protocol": "UART", "Bandwidth": "Medium", "Status": "✅ Mapped"})
@@ -110,7 +111,6 @@ def render_pinout_mapper_tab():
                 routing_table.append({"Device": "ESP32 SDR Sniffer", "Protocol": "UART", "Bandwidth": "Medium", "Status": "❌ Port Unavailable"})
                 used_uart += 1
                 
-        # Optical Flow
         if has_optical:
             if used_i2c < sys_io["I2C"]:
                 routing_table.append({"Device": "Optical Flow + ToF", "Protocol": "I2C", "Bandwidth": "Low", "Status": "✅ Mapped"})

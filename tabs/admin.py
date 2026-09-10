@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
 import json
-from utils import commit_to_github, sync_external_data
+from utils import commit_to_github
+from utils import ingest_forge_data
 
 def render_admin_tab():
     CATEGORIES = ["MOTORS", "FLIGHT_CONTROLLERS", "SBCS", "INTEGRATED_BOARDS", "FRAMES", "BATTERIES"]
@@ -11,7 +12,6 @@ def render_admin_tab():
     
     if "admin_notify" in st.session_state:
         if "❌" in st.session_state.admin_notify or "Validation" in st.session_state.admin_notify:
-            # Restored corrupted emojis
             st.error(st.session_state.admin_notify, icon="⚠️")
         else:
             st.success(st.session_state.admin_notify, icon="✅")
@@ -329,17 +329,22 @@ def render_admin_tab():
         with tab_sync:
             st.markdown("### ☁️ Remote Database Synchronization")
             st.caption("Review the local session changes below before pushing the updated JSON payload to the master GitHub repository.")
-            # Inside with tab_sync:
-            st.markdown("### 🔄 Ingest Remote Catalogs (UAVs.fyi & UAS-Forge)")
-            st.caption("Fetch external parts feeds and merge new entries into the live session and local JSON file.")
-
-            if st.button("🚀 Pull & Merge Remote Parts", use_container_width=True):
-                with st.spinner("Connecting to external databases..."):
-                    new_parts = sync_external_data(st.session_state)
-                    st.session_state.admin_notify = f"Sync complete: {new_parts} components added/updated."
+            
+            st.markdown("#### 📥 Ingest Remote Data (UAS-Forge)")
+            st.caption("Fetch the latest open-source hardware profiles and empirical telemetry from the DroneWuKong/forge-data repository.")
+            
+            from utils import ingest_forge_data
+            if st.button("🔄 Pull UAS-Forge Parts Dataset", use_container_width=True):
+                with st.spinner("Connecting to DroneWuKong GitHub API and mapping schemas..."):
+                    success, msg, count = ingest_forge_data()
+                    if success:
+                        st.session_state.admin_notify = f"✅ Ingestion Complete: {count} new components mapped into active session memory."
+                    else:
+                        st.session_state.admin_notify = f"❌ {msg}"
                     st.rerun()
-
+            
             st.divider()
+
             full_catalog = {cat: st.session_state[cat] for cat in CATEGORIES}
             
             with st.expander("🔍 View JSON Payload Preview", expanded=False):

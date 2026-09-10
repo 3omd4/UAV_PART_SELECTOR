@@ -93,6 +93,9 @@ def render_builder_tab():
     total_payload_weight = compute_and_fc_weight + sensor_weight
     
     batt_weight = battery["weight_g"] if battery["weight_g"] is not None else 0.0
+    batt_weight = battery["weight_g"] if battery["weight_g"] is not None else 0.0
+    batt_price_egp = battery["price_egp"] or 0.0
+    batt_price_usd = battery["price_usd"] or 0.0
     auw_g = frame["weight_g"] + propulsion_weight + batt_weight + total_payload_weight
     auw_kg = auw_g / 1000.0
     

@@ -9,9 +9,9 @@ def render_admin_tab():
     st.subheader("Database Management & Cloud Synchronization")
     st.caption("Add, modify, or deprecate hardware components. Changes persist in the active session and can be pushed to the central repository.")
     
-    # Centralized notification handling
     if "admin_notify" in st.session_state:
         if "❌" in st.session_state.admin_notify or "Validation" in st.session_state.admin_notify:
+            # Restored corrupted emojis
             st.error(st.session_state.admin_notify, icon="⚠️")
         else:
             st.success(st.session_state.admin_notify, icon="✅")
@@ -22,9 +22,6 @@ def render_admin_tab():
     if admin_pass == st.secrets.get("ADMIN_PASSWORD", "local_test_pass"):
         st.success("Authentication successful. Engineering database unlocked.")
         
-        # ------------------------------------------
-        # ARCHITECTURAL UPGRADE: Nested Admin Routing
-        # ------------------------------------------
         tab_add, tab_edit, tab_del, tab_sync = st.tabs([
             "➕ Add Component", 
             "✏️ Edit Component", 
@@ -192,7 +189,6 @@ def render_admin_tab():
                     st.markdown(f"**{edit_category} Specifications**")
                     edit_entry = {}
                     
-                    # Logic exactly matches Add form, but populates 'value' from cur_data
                     if edit_category == "MOTORS":
                         em_c1, em_c2, em_c3 = st.columns(3)
                         e_weight = em_c1.number_input("Weight (g)*", min_value=0.1, value=float(cur_data.get("weight", 30.0)), step=0.5)

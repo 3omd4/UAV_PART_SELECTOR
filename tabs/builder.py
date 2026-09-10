@@ -4,7 +4,6 @@ import math
 import re
 
 def extract_inches(prop_string):
-    """Helper to extract numeric propeller size from strings."""
     if not prop_string:
         return 0.0
     match = re.search(r"([0-9]*\.?[0-9]+)", str(prop_string))
@@ -13,7 +12,6 @@ def extract_inches(prop_string):
     return 0.0
 
 def render_builder_tab():
-    # Retrieve active database and presets from session state
     FRAMES = st.session_state.get("FRAMES", {})
     MOTORS = st.session_state.get("MOTORS", {})
     BATTERIES = st.session_state.get("BATTERIES", {})
@@ -24,11 +22,10 @@ def render_builder_tab():
     preset = st.session_state.get("builder_preset", {})
     
     st.subheader("Configure Platform & Evaluate Compatibility")
-    
     col_inputs, col_physics = st.columns([1.1, 1.5], gap="large")
     
     # ==========================================
-    # LEFT COLUMN: USER INPUTS (Preset Aware)
+    # LEFT COLUMN: USER INPUTS
     # ==========================================
     with col_inputs:
         st.markdown("### ⚙️ Hardware Configuration")
@@ -77,7 +74,6 @@ def render_builder_tab():
         ])
         esp32_sniffer = st.checkbox("Include ESP32-S3 SDR Sniffer (+25g, 1.5W)", value=True)
         
-        # Sensor payload math
         sensor_weight, sensor_power = 0.0, 0.0
         if esp32_sniffer:
             sensor_weight += 25.0
@@ -146,6 +142,7 @@ def render_builder_tab():
         
         a1, a2, a3, a4 = st.columns(4)
         a1.metric("Hover Throttle", f"{hover_throttle_pct:.1f}%")
+        # Restored the corrupted unicode characters here
         a2.metric("Disk Loading", f"{disk_loading_kg_m2:.1f} kg/m²")
         a3.metric("Peak Current", f"{total_peak_system_amps:.1f} A")
         a4.metric("Total Cost", f"${total_cost_usd:,.0f}")
@@ -231,6 +228,10 @@ def render_builder_tab():
         if frame.get("wheelbase_mm", 0) > 400:
             st.warning(f"⚠️ **Spatial Footprint Caution:** Wheelbase ({frame.get('wheelbase_mm')}mm) exceeds typical 400mm indoor limits. Increases swarm collision risk.")
             
+        # New constraint: Evaluate indoor disk loading (turbulent downwash effect)
+        if disk_loading_kg_m2 > 12.0:
+            st.warning(f"⚠️ **High Disk Loading ({disk_loading_kg_m2:.1f} kg/m²):** High risk of severe indoor downwash. Can cause sensor dust scattering and ground-effect turbulence.")
+
         if not frame.get("ducted", True):
             st.warning("⚠️ **Safety Hazard:** Open propellers selected. Wall strikes or mid-air node touches risk instant motor stalls.")
 

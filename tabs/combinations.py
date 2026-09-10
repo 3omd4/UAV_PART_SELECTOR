@@ -5,7 +5,6 @@ import math
 import re
 
 def extract_inches(prop_string):
-    """Helper to extract numeric propeller size from strings."""
     if not prop_string:
         return 0.0
     match = re.search(r"([0-9]*\.?[0-9]+)", str(prop_string))
@@ -14,7 +13,6 @@ def extract_inches(prop_string):
     return 0.0
 
 def render_combinations_tab():
-    # Retrieve active database from session state
     FRAMES = st.session_state.get("FRAMES", {})
     MOTORS = st.session_state.get("MOTORS", {})
     BATTERIES = st.session_state.get("BATTERIES", {})
@@ -38,6 +36,7 @@ def render_combinations_tab():
         ], key="combo_lidar_key")
         
         st.markdown("---")
+        # Restored the corrupted string definition
         strict_mode = st.checkbox(
             "🛡️ **Strict Operational Mode (Zero Warnings)**", 
             value=False, 
@@ -52,7 +51,6 @@ def render_combinations_tab():
         w_ai = st.slider("Compute Priority (AI TOPS)", 0.0, 1.0, 0.8, 0.1)
         w_twr = st.slider("Agility Priority (Thrust-to-Weight)", 0.0, 1.0, 0.2, 0.1)
 
-    # Payload math mapping
     sensor_weight, sensor_power = 0.0, 0.0
     if combo_esp32:
         sensor_weight += 25.0
@@ -114,9 +112,6 @@ def render_combinations_tab():
         
         hover_throttle_pct = (auw_g / total_max_thrust_g) * 100 if total_max_thrust_g > 0 else 100.0
 
-        # ------------------------------------------
-        # HARD CONSTRAINTS (Zero Red Warnings Guarantee)
-        # ------------------------------------------
         if battery.get("cells") not in motor.get("cells", []):
             return None
         if total_payload_weight > frame.get("payload_limit_g", 0):
@@ -126,9 +121,6 @@ def render_combinations_tab():
         if total_peak_system_amps > batt_max_discharge_amps:
             return None
 
-        # ------------------------------------------
-        # OPERATIONAL CONSTRAINTS (Yellow Warnings Filter)
-        # ------------------------------------------
         if strict_mode:
             if hover_throttle_pct > 65.0 or hover_throttle_pct < 20.0:
                 return None
@@ -163,6 +155,7 @@ def render_combinations_tab():
 
     st.divider()
     
+    # Restored the corrupted string definition
     if st.button("🚀 Execute Combinatorial Solver", type="primary", use_container_width=True):
         if not all([FRAMES, MOTORS, BATTERIES, FLIGHT_CONTROLLERS, SBCS]):
             st.error("Incomplete database. Ensure at least one component exists in Frames, Motors, Batteries, FCs, and SBCs before running the solver.")
@@ -187,9 +180,6 @@ def render_combinations_tab():
                 
             df_combos = pd.DataFrame(valid_combos)
             
-            # ==========================================
-            # DYNAMIC FITNESS SCORING
-            # ==========================================
             def normalize(series, invert=False):
                 if series.max() == series.min():
                     return 0.5
@@ -221,13 +211,9 @@ def render_combinations_tab():
             
             st.session_state["solver_results"] = df_combos
             
-            # Clear any previously selected preset when generating a new matrix
             if "builder_preset" in st.session_state:
                 del st.session_state["builder_preset"]
 
-    # ==========================================
-    # DISPLAY CACHED RESULTS & EXPLICIT LOAD BUTTON
-    # ==========================================
     if "solver_results" in st.session_state:
         df_combos = st.session_state["solver_results"]
         
@@ -257,7 +243,6 @@ def render_combinations_tab():
             }
         )
         
-        # Safely extract selection using Streamlit >= 1.35 attribute syntax
         selected_rows = selection_event.selection.rows
         
         if selected_rows:
@@ -266,7 +251,6 @@ def render_combinations_tab():
             
             st.markdown(f"**🎯 Targeted Configuration:** Rank `#{row['Rank']}` ({row['Frame']} + {row['Motor']})")
             
-            # Explicit Commit Architecture
             if st.button(f"📥 Lock in Rank #{row['Rank']} & Load into Drone Builder", type="primary", use_container_width=True):
                 st.session_state["builder_preset"] = {
                     "frame": row["Frame"],

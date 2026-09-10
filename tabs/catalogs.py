@@ -6,13 +6,10 @@ def process_catalog_df(db_dict, search_query):
     if not db_dict:
         return pd.DataFrame()
         
-    # Convert dict to dataframe and promote the key to a 'Model' column
     df = pd.DataFrame.from_dict(db_dict, orient="index").reset_index()
     df.rename(columns={"index": "Model"}, inplace=True)
     
-    # Apply search filter if query exists
     if search_query:
-        # Check across all columns for the search string (case-insensitive)
         mask = df.apply(lambda row: row.astype(str).str.contains(search_query, case=False).any(), axis=1)
         df = df[mask]
         
@@ -21,7 +18,6 @@ def process_catalog_df(db_dict, search_query):
 def render_catalogs_tab():
     st.subheader("Component Technical Specifications & Cost Tables")
     
-    # Retrieve active databases
     MOTORS = st.session_state.get("MOTORS", {})
     FLIGHT_CONTROLLERS = st.session_state.get("FLIGHT_CONTROLLERS", {})
     SBCS = st.session_state.get("SBCS", {})
@@ -37,19 +33,12 @@ def render_catalogs_tab():
     with col_search:
         search_query = st.text_input("🔍 Global Search (e.g., 'Jetson', '1700KV', 'Holybro'):", "")
 
-    # Implement inner tabs to prevent endless vertical scrolling
     cat_tabs = st.tabs([
-        "Motors", 
-        "Companion Computers", 
-        "Flight Controllers", 
-        "Batteries", 
-        "Airframes", 
-        "Integrated Boards"
+        "🚀 Motors", "🧠 Companion Computers", "🕹️ Flight Controllers", 
+        "⚡ Batteries", "🛸 Airframes", "🛠️ Integrated Boards"
     ])
     
-    # ==========================================
-    # 1. MOTORS
-    # ==========================================
+    # Restored all truncated string configurations (Link ↗)
     with cat_tabs[0]:
         df_motors = process_catalog_df(MOTORS, search_query)
         if not df_motors.empty:
@@ -62,22 +51,19 @@ def render_catalogs_tab():
                     "weight": st.column_config.NumberColumn("Weight", format="%.1f g"),
                     "thrust": st.column_config.NumberColumn("Max Thrust", format="%.1f g"),
                     "prop": st.column_config.TextColumn("Prop Size"),
-                    "efficiency_hover_gw": st.column_config.NumberColumn("Hover Eff.", format="%.2f g/W", help="Higher ratio indicates better endurance."),
+                    "efficiency_hover_gw": st.column_config.NumberColumn("Hover Eff.", format="%.2f g/W"),
                     "cells": st.column_config.ListColumn("Cells (S)"),
                     "price_egp": st.column_config.NumberColumn("Cost (EGP)", format="EGP %.0f"),
                     "price_usd": st.column_config.NumberColumn("Cost (USD)", format="$%.2f"),
                     "buy_url": st.column_config.LinkColumn("Vendor", display_text="Link ↗"),
                     "notes": st.column_config.TextColumn("Engineering Notes", width="large"),
-                    "source": None # Hide internal source tracking from main view
+                    "source": None 
                 },
                 use_container_width=True, hide_index=True
             )
         else:
             st.info("No motors found matching your search.")
 
-    # ==========================================
-    # 2. SBCs (Single Board Computers)
-    # ==========================================
     with cat_tabs[1]:
         df_sbcs = process_catalog_df(SBCS, search_query)
         if not df_sbcs.empty:
@@ -86,7 +72,7 @@ def render_catalogs_tab():
                 column_config={
                     "Model": st.column_config.TextColumn("SBC Model", width="medium"),
                     "cpu": st.column_config.TextColumn("Processor / RAM"),
-                    "ai_tops": st.column_config.ProgressColumn("AI Compute (TOPS)", format="%.1f", min_value=0, max_value=50, help="Trillions of Operations Per Second. Crucial for VIO and SLAM."),
+                    "ai_tops": st.column_config.ProgressColumn("AI Compute (TOPS)", format="%.1f", min_value=0, max_value=50),
                     "weight": st.column_config.NumberColumn("Weight", format="%.1f g"),
                     "power_w": st.column_config.NumberColumn("Avg Power", format="%.1f W"),
                     "dim": st.column_config.TextColumn("Dimensions"),
@@ -100,9 +86,6 @@ def render_catalogs_tab():
         else:
             st.info("No SBCs found matching your search.")
 
-    # ==========================================
-    # 3. FLIGHT CONTROLLERS
-    # ==========================================
     with cat_tabs[2]:
         df_fc = process_catalog_df(FLIGHT_CONTROLLERS, search_query)
         if not df_fc.empty:
@@ -124,9 +107,6 @@ def render_catalogs_tab():
         else:
             st.info("No Flight Controllers found matching your search.")
 
-    # ==========================================
-    # 4. BATTERIES
-    # ==========================================
     with cat_tabs[3]:
         df_batt = process_catalog_df(BATTERIES, search_query)
         if not df_batt.empty:
@@ -151,9 +131,6 @@ def render_catalogs_tab():
         else:
             st.info("No Batteries found matching your search.")
 
-    # ==========================================
-    # 5. FRAMES
-    # ==========================================
     with cat_tabs[4]:
         df_frames = process_catalog_df(FRAMES, search_query)
         if not df_frames.empty:
@@ -177,9 +154,6 @@ def render_catalogs_tab():
         else:
             st.info("No Airframes found matching your search.")
 
-    # ==========================================
-    # 6. INTEGRATED BOARDS
-    # ==========================================
     with cat_tabs[5]:
         df_integrated = process_catalog_df(INTEGRATED_BOARDS, search_query)
         if not df_integrated.empty:

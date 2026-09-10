@@ -1,6 +1,6 @@
 import streamlit as st
 import json
-from tabs import catalogs, builder, admin, combinations
+from tabs import catalogs, builder, admin, combinations, flight_envelope
 
 # Restored the corrupted page configuration and missing quotes
 st.set_page_config(
@@ -33,8 +33,8 @@ for cat in CATEGORIES:
 st.title("Indoor UAV Components List & Builder")
 st.caption("Systems engineering evaluator for localized decentralized SLAM & RF/RSSI mapping platforms.")
 
-tab_catalogs, tab_builder, tab_admin, tab_combinations = st.tabs([
-    "Component Catalogs", "Drone Builder", "Admin (Add Parts)", "Valid Combinations"
+tab_catalogs, tab_builder, tab_admin, tab_combinations, tab_envelope = st.tabs([
+    "Component Catalogs", "Drone Builder", "Admin (Add Parts)", "Valid Combinations", "Flight Envelope"
 ])
 
 # Route each tab to its respective module function
@@ -46,3 +46,5 @@ with tab_admin:
     admin.render_admin_tab()
 with tab_combinations:
     combinations.render_combinations_tab()
+with tab_envelope:
+    flight_envelope.render_flight_envelope_tab()

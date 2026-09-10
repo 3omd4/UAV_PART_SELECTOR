@@ -1,5 +1,16 @@
 import streamlit as st
 import pandas as pd
+import math
+import re
+
+def extract_inches(prop_string):
+    """Helper to extract numeric propeller size from strings."""
+    if not prop_string:
+        return 0.0
+    match = re.search(r"([0-9]*\.?[0-9]+)", str(prop_string))
+    if match:
+        return float(match.group(1))
+    return 0.0
 
 def render_builder_tab():
     # Retrieve active database from session state
@@ -9,220 +20,239 @@ def render_builder_tab():
     FLIGHT_CONTROLLERS = st.session_state.FLIGHT_CONTROLLERS
     SBCS = st.session_state.SBCS
     INTEGRATED_BOARDS = st.session_state.INTEGRATED_BOARDS
-
+    
     st.subheader("Configure Platform & Evaluate Compatibility")
     
-    col_cfg, col_results = st.columns([1.1, 1.2], gap="large")
-    # --- INPUTS (LEFT COLUMN) ---
-    st.markdown("#### 1. Airframe Selection")
-    selected_frame_name = st.selectbox("Frame Architecture:", list(FRAMES.keys()), index=0)
-    frame = FRAMES[selected_frame_name]
-    st.markdown("#### 2. Autonomy & Avionics Stack")
-    arch_choice = st.radio("Avionics Architecture:", ["Modular (Separate FC + SBC)", "Integrated Board (All-in-One)"])
-    fc_weight, fc_price_egp, fc_price_usd = 0.0, 0.0, 0.0
-    sbc_weight, sbc_price_egp, sbc_price_usd, sbc_power_w = 0.0, 0.0, 0.0, 0.0
-    int_board_name = None
-    fc_name = None
-    sbc_name = None
-    if arch_choice == "Modular (Separate FC + SBC)":
-        fc_name = st.selectbox("Flight Controller:", list(FLIGHT_CONTROLLERS.keys()), index=1)
-        sbc_name = st.selectbox("Companion Computer (SBC):", list(SBCS.keys()), index=1)
-        fc = FLIGHT_CONTROLLERS[fc_name]
-        sbc = SBCS[sbc_name]
-        fc_weight, fc_price_egp, fc_price_usd = fc["weight"], fc["price_egp"], fc["price_usd"]
-        sbc_weight, sbc_price_egp, sbc_price_usd, sbc_power_w = sbc["weight"], sbc["price_egp"], sbc["price_usd"], sbc["power_w"]
-        ai_tops = sbc["ai_tops"]
-    else:
-        int_board_name = st.selectbox("Integrated Autonomy Board:", list(INTEGRATED_BOARDS.keys()), index=0)
-        int_board = INTEGRATED_BOARDS[int_board_name]
-        sbc_weight, sbc_price_egp, sbc_price_usd, sbc_power_w = int_board["weight"], int_board["price_egp"], int_board["price_usd"], int_board["power_w"]
-        ai_tops = 15.0 if "VOXL" in int_board_name else (40.0 if "Jetson" in int_board_name else 0.0)
-    st.markdown("#### 3. Propulsion System")
-    motor_name = st.selectbox("Brushless Motors:", list(MOTORS.keys()), index=2)
-    motor = MOTORS[motor_name]
-    st.markdown("#### 4. Energy Storage")
-    battery_name = st.selectbox("Battery Pack:", list(BATTERIES.keys()), index=0)
-    battery = BATTERIES[battery_name]
-    st.markdown("#### 5. Mission Payload (Sensors & ESP32)")
-    esp32_sniffer = st.checkbox("ESP32-S3 SDR Sniffer + Dual Antennas (~25g, 1.5W)", value=True)
-    lidar_cam = st.selectbox("Perception Sensor:", [
-        "Lightweight 2D LiDAR (e.g. LD06 / RPLidar) (~45g, 1.5W)",
-        "Stereo VIO Depth Camera (e.g. RealSense D435i) (~75g, 2.5W)",
-        "Optical Flow + Downward ToF (~15g, 0.5W)",
-        "None (Pre-mapped / Motion Capture Only) (0g, 0W)"
-    ])
-    # Sensor payload math
-    sensor_weight = 0.0
-    sensor_power = 0.0
-    if esp32_sniffer:
-        sensor_weight += 25.0
-        sensor_power += 1.5
-    if "LiDAR" in lidar_cam:
-        sensor_weight += 45.0
-        sensor_power += 1.5
-    elif "Stereo" in lidar_cam:
-        sensor_weight += 75.0
-        sensor_power += 2.5
-    elif "Optical" in lidar_cam:
-        sensor_weight += 15.0
-        sensor_power += 0.5
-    esc_wiring_weight = 40.0  # standard 4-in-1 ESC + wiring harness
-    # --- COMPUTATIONS (Script level to be shared across columns) ---
+    # Establish a cleaner 2-column layout
+    col_inputs, col_physics = st.columns([1.1, 1.5], gap="large")
+    
+    # ==========================================
+    # LEFT COLUMN: USER INPUTS
+    # ==========================================
+    with col_inputs:
+        st.markdown("### ⚙️ Hardware Configuration")
+        
+        selected_frame_name = st.selectbox("1. Airframe Architecture:", list(FRAMES.keys()), index=0)
+        frame = FRAMES[selected_frame_name]
+        
+        arch_choice = st.radio("2. Avionics Stack:", ["Modular (Separate FC + SBC)", "Integrated Board (All-in-One)"])
+        fc_weight, fc_price_egp, fc_price_usd = 0.0, 0.0, 0.0
+        sbc_weight, sbc_price_egp, sbc_price_usd, sbc_power_w = 0.0, 0.0, 0.0, 0.0
+        int_board_name, fc_name, sbc_name = None, None, None
+        
+        if arch_choice == "Modular (Separate FC + SBC)":
+            fc_name = st.selectbox("Flight Controller:", list(FLIGHT_CONTROLLERS.keys()), index=1)
+            sbc_name = st.selectbox("Companion Computer (SBC):", list(SBCS.keys()), index=1)
+            fc, sbc = FLIGHT_CONTROLLERS[fc_name], SBCS[sbc_name]
+            fc_weight, fc_price_egp, fc_price_usd = fc["weight"], fc["price_egp"], fc["price_usd"]
+            sbc_weight, sbc_price_egp, sbc_price_usd, sbc_power_w = sbc["weight"], sbc["price_egp"], sbc["price_usd"], sbc["power_w"]
+            ai_tops = sbc["ai_tops"]
+        else:
+            int_board_name = st.selectbox("Integrated Autonomy Board:", list(INTEGRATED_BOARDS.keys()), index=0)
+            int_board = INTEGRATED_BOARDS[int_board_name]
+            sbc_weight, sbc_price_egp, sbc_price_usd, sbc_power_w = int_board["weight"], int_board["price_egp"], int_board["price_usd"], int_board["power_w"]
+            ai_tops = 15.0 if "VOXL" in int_board_name else (40.0 if "Jetson" in int_board_name else 0.0)
+            
+        motor_name = st.selectbox("3. Brushless Motors:", list(MOTORS.keys()), index=2)
+        motor = MOTORS[motor_name]
+        
+        battery_name = st.selectbox("4. Energy Storage:", list(BATTERIES.keys()), index=0)
+        battery = BATTERIES[battery_name]
+        
+        lidar_cam = st.selectbox("5. Perception Sensor:", [
+            "Lightweight 2D LiDAR (~45g, 1.5W)",
+            "Stereo VIO Depth Camera (~75g, 2.5W)",
+            "Optical Flow + Downward ToF (~15g, 0.5W)",
+            "None (Pre-mapped / MoCap) (0g, 0W)"
+        ])
+        esp32_sniffer = st.checkbox("Include ESP32-S3 SDR Sniffer (+25g, 1.5W)", value=True)
+        
+        # Sensor payload math
+        sensor_weight, sensor_power = 0.0, 0.0
+        if esp32_sniffer:
+            sensor_weight += 25.0
+            sensor_power += 1.5
+        if "LiDAR" in lidar_cam:
+            sensor_weight += 45.0
+            sensor_power += 1.5
+        elif "Stereo" in lidar_cam:
+            sensor_weight += 75.0
+            sensor_power += 2.5
+        elif "Optical" in lidar_cam:
+            sensor_weight += 15.0
+            sensor_power += 0.5
+            
+        esc_wiring_weight = 40.0
+
+    # ==========================================
+    # BACKGROUND COMPUTATIONS
+    # ==========================================
     num_motors = frame["motor_count"]
     propulsion_weight = (motor["weight"] * num_motors) + esc_wiring_weight
     compute_and_fc_weight = fc_weight + sbc_weight
     total_payload_weight = compute_and_fc_weight + sensor_weight
-    # Safe weight handling if battery weight is null/None in data
+    
     batt_weight = battery["weight_g"] if battery["weight_g"] is not None else 0.0
-    batt_price_egp = battery["price_egp"] if battery["price_egp"] is not None else 0.0
-    batt_price_usd = battery["price_usd"] if battery["price_usd"] is not None else 0.0
-    # All-Up Weight (AUW)
     auw_g = frame["weight_g"] + propulsion_weight + batt_weight + total_payload_weight
     auw_kg = auw_g / 1000.0
-    # Thrust and TWR
+    
     total_max_thrust_g = motor["thrust"] * num_motors
     twr = total_max_thrust_g / auw_g if auw_g > 0 else 0.0
-    # Costs
-    motor_total_cost_egp = motor["price_egp"] * num_motors
-    motor_total_cost_usd = motor["price_usd"] * num_motors
-    esc_cost_egp = 1500.0  # est 4-in-1 40A ESC
-    esc_cost_usd = 30.0
-    total_cost_egp = frame["price_egp"] + motor_total_cost_egp + esc_cost_egp + fc_price_egp + sbc_price_egp + batt_price_egp
-    total_cost_usd = frame["price_usd"] + motor_total_cost_usd + esc_cost_usd + fc_price_usd + sbc_price_usd + batt_price_usd
-    # Hover Endurance Calculation
+    hover_throttle_pct = (auw_g / total_max_thrust_g) * 100 if total_max_thrust_g > 0 else 100.0
+    
+    prop_size_in = extract_inches(frame["max_prop"]) or extract_inches(motor["prop"])
+    if prop_size_in > 0:
+        total_disk_area_m2 = (math.pi * (((prop_size_in * 0.0254) / 2.0) ** 2)) * num_motors
+        disk_loading_kg_m2 = auw_kg / total_disk_area_m2 if total_disk_area_m2 > 0 else 0.0
+    else:
+        total_disk_area_m2, disk_loading_kg_m2 = 0.0, 0.0
+        
+    batt_max_discharge_amps = (battery["mah"] / 1000.0) * battery["c_rating"]
+    total_elec_power_w = sbc_power_w + sensor_power + 3.0
+    
+    # Avoid division by zero if voltage is missing
+    batt_voltage = battery["voltage"] if battery["voltage"] > 0 else 1.0
+    total_peak_system_amps = ((motor["thrust"] / 3.0) / batt_voltage * num_motors) + (total_elec_power_w / batt_voltage)
+
     hover_mech_power_w = auw_g / motor["efficiency_hover_gw"]
-    total_elec_power_w = sbc_power_w + sensor_power + 3.0  # 3W FC/Receiver baseline
     total_hover_power_w = hover_mech_power_w + total_elec_power_w
-    usable_wh = battery["wh"] * 0.85
-    flight_time_minutes = (usable_wh / total_hover_power_w) * 60.0
-    # --- ADD POWER & MASS BREAKDOWN TO LEFT COLUMN ---
-    with col_cfg:
-        st.markdown("---")
-        st.markdown("#### Power & Mass Breakdown")
-        b1, b2 = st.columns(2)
-        with b1:
-            st.markdown("**Mass Distribution:**")
-            st.write(f"- Frame & Cowlings: `{frame['weight_g']} g`")
-            st.write(f"- Propulsion: `{propulsion_weight:.1f} g`")
-            st.write(f"- Battery Pack: `{batt_weight:.1f} g`")
-            st.write(f"- Compute & Avionics: `{compute_and_fc_weight:.1f} g`")
-            st.write(f"- Sensors & RF Payload: `{sensor_weight:.1f} g`")
-        with b2:
-            st.markdown("**Electrical Draw (Hover):**")
-            st.write(f"- Motors (Mech): `{hover_mech_power_w:.1f} W`")
-            st.write(f"- Compute Board: `{sbc_power_w:.1f} W`")
-            st.write(f"- Sensors/RF: `{sensor_power:.1f} W`")
-            st.write(f"- **Total Draw:** `{total_hover_power_w:.1f} W`")
-    # --- METRICS & RESULTS (RIGHT COLUMN) ---
-    with col_results:
-        st.markdown("### System Spec & Viability Assessment")
-        # Metrics display
-        m1, m2, m3 = st.columns(3)
-        m1.metric("All-Up Weight (AUW)", f"{auw_g:.1f} g", help="Includes frame, motors, ESC, battery, compute, sensors.")
-        m2.metric("Thrust-to-Weight", f"{twr:.2f} : 1", delta="Optimal: 2.0 - 3.5" if 2.0 <= twr <= 3.8 else "Warning")
-        m3.metric("Est. Hover Time", f"{flight_time_minutes:.1f} mins", help="Based on 85% battery discharge, electrical + mechanical draw.")
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Total Build Cost", f"{total_cost_egp:,.0f} EGP")
-        c2.metric("Cost in USD", f"${total_cost_usd:,.1f}")
-        c3.metric("AI Compute", f"{ai_tops} TOPS")
-        st.markdown("---")
-        # --- PAYLOAD VISUALIZER ---
-        st.markdown("#### Payload Capacity Limits")
-        # Structural Payload Limit
-        payload_pct = min((total_payload_weight / frame["payload_limit_g"]), 1.0)
-        st.caption(f"**Structural Payload Used:** {total_payload_weight:.1f}g out of {frame['payload_limit_g']}g frame limit")
-        st.progress(payload_pct)
-        # Dynamic Payload Limit (Thrust constraint for TWR >= 2.0)
-        max_safe_auw = total_max_thrust_g / 2.0
-        remaining_thrust_payload_g = max_safe_auw - auw_g
-        col_p1, col_p2 = st.columns(2)
-        col_p1.metric("Remaining Frame Payload", f"{max(0, frame['payload_limit_g'] - total_payload_weight):.1f} g", help="Maximum weight the carbon fiber/plastic frame can structurally support.")
-        col_p2.metric("Remaining Safe Lift", f"{remaining_thrust_payload_g:.1f} g", help="Maximum weight you can add before the TWR drops below the safe 2.0 threshold required for indoor stability.")
-        st.markdown("---")
-        # --- SPATIAL & DIMENSIONAL FOOTPRINT ---
-        st.markdown("#### Spatial & Dimensional Footprint")
-        st.write(f"- **Airframe Span (Wheelbase):** `{frame['wheelbase_mm']} mm` (Motor-to-motor diagonal)")
-        st.write(f"- **Motor Stator Dimensions:** `{motor['stator']}`")
-        if arch_choice == "Modular (Separate FC + SBC)":
-            st.write(f"- **Flight Controller Size:** `{fc['dim']}`")
-            st.write(f"- **Companion PC (SBC) Size:** `{sbc['dim']}`")
-        else:
-            st.write(f"- **Integrated Avionics Size:** `{int_board['dim']}`")
-        st.markdown("---")
-        # --- MATHEMATICAL BREAKDOWN EXPANDER ---
-        with st.expander("View Step-by-Step Physics Calculations"):
-            st.markdown("**1. All-Up Weight (AUW)**")
-            st.latex(r"AUW = W_{frame} + (W_{motor} \times N) + W_{esc} + W_{batt} + W_{avionics} + W_{sensors}")
-            st.markdown(f"AUW = {frame['weight_g']}g + ({motor['weight']}g × {num_motors}) + {esc_wiring_weight}g + {batt_weight}g + {compute_and_fc_weight}g + {sensor_weight}g = **{auw_g:.1f} g**")
-            st.markdown("**2. Thrust-to-Weight Ratio (TWR)**")
-            st.latex(r"TWR = \frac{Thrust_{max} \times N}{AUW}")
-            st.markdown(f"TWR = ({motor['thrust']}g × {num_motors}) / {auw_g:.1f}g = **{twr:.2f}**")
-            st.markdown("**3. Continuous Hover Power Draw**")
-            st.latex(r"P_{hover} = \frac{AUW}{\eta_{motor}} + P_{avionics} + P_{sensors} + P_{misc}")
-            st.markdown(f"P_hover = ({auw_g:.1f}g / {motor['efficiency_hover_gw']} g/W) + {sbc_power_w}W + {sensor_power}W + 3.0W = **{total_hover_power_w:.1f} W**")
-            st.markdown("**4. Estimated Flight Time**")
-            st.latex(r"T_{flight} = \frac{E_{batt} \times 0.85}{P_{hover}} \times 60")
-            st.markdown(f"Flight Time = ({battery['wh']} Wh × 0.85 / {total_hover_power_w:.1f} W) × 60 = **{flight_time_minutes:.1f} minutes**")
-        st.markdown("#### Engineering & Safety Rules Verification")
+    flight_time_minutes = ((battery["wh"] * 0.85) / total_hover_power_w) * 60.0 if total_hover_power_w > 0 else 0.0
+
+    # Costs
+    total_cost_egp = frame["price_egp"] + (motor["price_egp"] * num_motors) + 1500.0 + fc_price_egp + sbc_price_egp + (battery["price_egp"] or 0)
+    total_cost_usd = frame["price_usd"] + (motor["price_usd"] * num_motors) + 30.0 + fc_price_usd + sbc_price_usd + (battery["price_usd"] or 0)
+
+    # ==========================================
+    # RIGHT COLUMN: PHYSICS & VALIDATION
+    # ==========================================
+    with col_physics:
+        st.markdown("### 📊 Executive KPIs")
+        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+        kpi1.metric("All-Up Weight", f"{auw_g:.1f} g")
+        kpi2.metric("Thrust-to-Weight", f"{twr:.2f}:1", delta="Optimum" if 2.0 <= twr <= 3.8 else "Warning", delta_color="off")
+        kpi3.metric("Est. Hover Time", f"{flight_time_minutes:.1f} min")
+        kpi4.metric("AI Compute", f"{ai_tops} TOPS")
+        
+        a1, a2, a3, a4 = st.columns(4)
+        a1.metric("Hover Throttle", f"{hover_throttle_pct:.1f}%")
+        a2.metric("Disk Loading", f"{disk_loading_kg_m2:.1f} kg/m²")
+        a3.metric("Peak Current", f"{total_peak_system_amps:.1f} A")
+        a4.metric("Total Cost", f"${total_cost_usd:,.0f}")
+
+        st.divider()
+        
+        st.markdown("### 🔬 Detailed System Telemetry")
+        tel1, tel2, tel3 = st.columns(3)
+        with tel1:
+            st.markdown("**Mass Breakdown (g)**")
+            st.write(f"- **Frame:** {frame['weight_g']}")
+            st.write(f"- **Propulsion:** {propulsion_weight:.1f}")
+            st.write(f"- **Avionics:** {compute_and_fc_weight:.1f}")
+            st.write(f"- **Sensors:** {sensor_weight:.1f}")
+            st.write(f"- **Battery:** {batt_weight:.1f}")
+        with tel2:
+            st.markdown("**Power Draw (W)**")
+            st.write(f"- **Hover (Mech):** {hover_mech_power_w:.1f}")
+            st.write(f"- **Compute:** {sbc_power_w:.1f}")
+            st.write(f"- **Sensors:** {sensor_power:.1f}")
+            st.write(f"- **Baseline:** 3.0")
+            st.write(f"- **Total:** {total_hover_power_w:.1f}")
+        with tel3:
+            st.markdown("**Spatial Footprint**")
+            st.write(f"- **Wheelbase:** {frame['wheelbase_mm']} mm")
+            st.write(f"- **Max Prop:** {frame['max_prop']}")
+            st.write(f"- **Stator:** {motor['stator']}")
+            st.write(f"- **Avionics:** {int_board['dim'] if int_board_name else sbc['dim']}")
+            
+        st.markdown("**Payload Limits**")
+        payload_pct = min((total_payload_weight / frame["payload_limit_g"]), 1.0) if frame["payload_limit_g"] > 0 else 1.0
+        st.progress(payload_pct, text=f"Structural Payload Used: {total_payload_weight:.1f}g / {frame['payload_limit_g']}g")
+
+        st.divider()
+        
+        st.markdown("### 📐 Live Physics Engine")
+        math1, math2 = st.columns(2)
+        with math1:
+            st.markdown("**1. Kinematics (Hover Throttle)**")
+            st.markdown(r"$$ Throttle_{hover} = \left( \frac{AUW}{Thrust_{max} \times N} \right) \times 100 $$")
+            st.markdown(f"**Result:** ({auw_g:.1f}g / {total_max_thrust_g:.1f}g) × 100 = `{hover_throttle_pct:.1f}%`")
+            
+            st.markdown("**2. Aerodynamics (Disk Loading)**")
+            st.markdown(r"$$ Disk\ Loading = \frac{AUW_{kg}}{N \times \pi \times r^2} $$")
+            st.markdown(f"**Result:** {auw_kg:.3f}kg / {total_disk_area_m2:.4f}m² = `{disk_loading_kg_m2:.1f} kg/m²`")
+
+        with math2:
+            st.markdown("**3. Thermodynamics (Endurance)**")
+            st.markdown(r"$$ T_{flight} = \frac{E_{batt} \times 0.85}{\frac{AUW}{\eta} + P_{elec}} \times 60 $$")
+            st.markdown(f"**Result:** ({battery['wh']}Wh × 0.85 / {total_hover_power_w:.1f}W) × 60 = `{flight_time_minutes:.1f} min`")
+            
+            st.markdown("**4. Electrical Load (Peak Amps)**")
+            st.markdown(r"$$ I_{peak} = \left( \frac{P_{mech}}{V} \times N \right) + I_{sys} $$")
+            st.markdown(f"**Result:** Peak `{total_peak_system_amps:.1f}A` vs Max Safe `{batt_max_discharge_amps:.1f}A`")
+
+        st.divider()
+        
+        st.markdown("### 🛡️ Comprehensive Safety Validation")
         # Validation checks
         checks_passed = True
+        
+        # Hard Errors (Physics & Electrical Failures)
+        if total_peak_system_amps > batt_max_discharge_amps:
+            st.error(f"❌ **C-Rating Hazard:** Peak draw ({total_peak_system_amps:.1f}A) exceeds battery limit ({batt_max_discharge_amps:.1f}A). Risk of voltage sag or fire.")
+            checks_passed = False
         if battery["cells"] not in motor["cells"]:
-            st.error(f"❌ **Voltage Incompatibility:** Motor '{motor_name}' supports {motor['cells']}S, but battery is {battery['cells']}S. Motor will overheat or brown out.")
+            st.error(f"❌ **Voltage Incompatibility:** Motor expects {motor['cells']}S, but battery provides {battery['cells']}S.")
             checks_passed = False
-        else:
-            st.success(f"✅ Voltage match: {battery['cells']}S pack is supported by the motor.")
         if total_payload_weight > frame["payload_limit_g"]:
-            st.error(f"❌ **Overweight:** Total payload ({total_payload_weight:.1f}g) exceeds frame payload limit ({frame['payload_limit_g']}g).")
+            st.error(f"❌ **Structural Overweight:** Payload ({total_payload_weight:.1f}g) exceeds frame limit ({frame['payload_limit_g']}g).")
             checks_passed = False
-        else:
-            st.success(f"✅ Payload budget safe: Carrying {total_payload_weight:.1f}g of {frame['payload_limit_g']}g allowed.")
         if twr < 1.8:
             st.error(f"❌ **Underpowered (TWR = {twr:.2f}):** Platform will struggle to stabilize during turbulent indoor downwash. Target ≥ 2.0.")
             checks_passed = False
-        elif twr > 4.5:
-            st.warning(f"⚠️ **Overpowered (TWR = {twr:.2f}):** Aggressive racing profile. High motor KV might induce high throttle sensitivity in hover.")
-        else:
-            st.success(f"✅ Dynamic thrust adequate for indoor recovery maneuvers.")
-        if frame["wheelbase_mm"] > 400:
-            st.warning(f"⚠️ **Spatial Footprint Caution:** Wheelbase ({frame['wheelbase_mm']}mm) exceeds the 400mm strict indoor limit. Swarm collision and downwash risks are elevated.")
-        else:
-            st.success(f"✅ Dimensionally compliant ({frame['wheelbase_mm']}mm ≤ 400mm).")
-        if not frame["ducted"]:
-            st.warning("⚠️ **Safety Hazard:** Open propellers selected. Wall strikes or mid-air node touches risk instant motor stalls and crashes.")
-        else:
-            st.success("✅ Enclosed / ducted propeller protection enabled.")
-        if checks_passed:
-            st.info("**Supervisor Pitch Takeaway:** This configuration satisfies all physical and electrical laws. It represents an actionable, stable build for your lab presentation.")
 
-            # ==========================================
-        # DYNAMIC BILL OF MATERIALS (BOM)
-        # ==========================================
-        st.markdown("---")
-        st.markdown("### Selected Bill of Materials (BoM)")
-        bom_data = []
-        bom_data.append({"Component": "Frame", "Model": selected_frame_name, "Weight (g)": frame["weight_g"], "Cost (EGP)": frame["price_egp"], "Where to Buy": frame["buy_url"]})
-        bom_data.append({"Component": f"Motors (x{num_motors})", "Model": motor_name, "Weight (g)": motor["weight"] * num_motors, "Cost (EGP)": motor["price_egp"] * num_motors, "Where to Buy": motor["buy_url"]})
-        bom_data.append({"Component": "ESC & Wiring", "Model": "4-in-1 40A ESC", "Weight (g)": esc_wiring_weight, "Cost (EGP)": esc_cost_egp, "Where to Buy": "https://makerselectronics.com"})
-        bom_data.append({"Component": "Battery", "Model": battery_name, "Weight (g)": batt_weight, "Cost (EGP)": batt_price_egp, "Where to Buy": battery["buy_url"]})
-        if arch_choice == "Modular (Separate FC + SBC)":
-            bom_data.append({"Component": "Flight Controller", "Model": fc_name, "Weight (g)": fc_weight, "Cost (EGP)": fc_price_egp, "Where to Buy": fc["buy_url"]})
-            bom_data.append({"Component": "SBC", "Model": sbc_name, "Weight (g)": sbc_weight, "Cost (EGP)": sbc_price_egp, "Where to Buy": sbc["buy_url"]})
-        else:
-            bom_data.append({"Component": "Integrated Board", "Model": int_board_name, "Weight (g)": sbc_weight, "Cost (EGP)": sbc_price_egp, "Where to Buy": int_board["buy_url"]})
-        if esp32_sniffer:
-            bom_data.append({"Component": "Payload Sensor", "Model": "ESP32-S3 SDR Sniffer", "Weight (g)": 25.0, "Cost (EGP)": 0.0, "Where to Buy": "https://makerselectronics.com"})
-        if "LiDAR" in lidar_cam:
-            bom_data.append({"Component": "Payload Sensor", "Model": "2D LiDAR", "Weight (g)": 45.0, "Cost (EGP)": 0.0, "Where to Buy": "https://makerselectronics.com"})
-        elif "Stereo" in lidar_cam:
-            bom_data.append({"Component": "Payload Sensor", "Model": "Stereo VIO Depth Camera", "Weight (g)": 75.0, "Cost (EGP)": 0.0, "Where to Buy": "https://www.intelrealsense.com/depth-camera-d435i/"})
-        elif "Optical" in lidar_cam:
-            bom_data.append({"Component": "Payload Sensor", "Model": "Optical Flow + ToF", "Weight (g)": 15.0, "Cost (EGP)": 0.0, "Where to Buy": "https://makerselectronics.com"})
-        df_bom = pd.DataFrame(bom_data)
-        st.dataframe(
-            df_bom,
-            column_config={
-                "Where to Buy": st.column_config.LinkColumn("Where to Buy", display_text="Link ↗"),
-                "Cost (EGP)": st.column_config.NumberColumn(format="EGP %.2f")
-            },
-            use_container_width=True, hide_index=True
-        )
+        # Operational Warnings (Engineer Discretion)
+        if hover_throttle_pct > 65.0:
+            st.warning(f"⚠️ **High Hover Throttle ({hover_throttle_pct:.1f}%):** Motors will operate near their upper limit to maintain altitude, leaving minimal control authority.")
+        elif hover_throttle_pct < 20.0:
+            st.warning(f"⚠️ **Low Hover Throttle ({hover_throttle_pct:.1f}%):** Platform is highly overpowered. Pitch/roll commands may be hypersensitive.")
+            
+        if twr > 4.5:
+            st.warning(f"⚠️ **Overpowered (TWR = {twr:.2f}):** Aggressive racing profile. Requires heavy PID tuning for smooth indoor flight.")
+            
+        if frame["wheelbase_mm"] > 400:
+            st.warning(f"⚠️ **Spatial Footprint Caution:** Wheelbase ({frame['wheelbase_mm']}mm) exceeds typical 400mm indoor limits. Increases swarm collision risk.")
+            
+        if not frame["ducted"]:
+            st.warning("⚠️ **Safety Hazard:** Open propellers selected. Wall strikes or mid-air node touches risk instant motor stalls.")
+
+        # Success States
+        if checks_passed:
+            st.success("✅ **Electrical & Structural Check Passed:** Core physics constraints are nominal.")
+
+    # ==========================================
+    # FULL WIDTH: DYNAMIC BILL OF MATERIALS
+    # ==========================================
+    st.divider()
+    st.markdown("### 🛒 Generated Bill of Materials (BoM)")
+    bom_data = [
+        {"Component": "Frame", "Model": selected_frame_name, "Weight (g)": frame["weight_g"], "Cost (EGP)": frame["price_egp"], "Buy": frame["buy_url"]},
+        {"Component": f"Motors (x{num_motors})", "Model": motor_name, "Weight (g)": motor["weight"] * num_motors, "Cost (EGP)": motor["price_egp"] * num_motors, "Buy": motor["buy_url"]},
+        {"Component": "ESC & Wiring", "Model": "4-in-1 40A ESC", "Weight (g)": esc_wiring_weight, "Cost (EGP)": 1500.0, "Buy": "https://makerselectronics.com"},
+        {"Component": "Battery", "Model": battery_name, "Weight (g)": batt_weight, "Cost (EGP)": batt_price_egp, "Buy": battery["buy_url"]}
+    ]
+    if arch_choice == "Modular (Separate FC + SBC)":
+        bom_data.extend([
+            {"Component": "Flight Controller", "Model": fc_name, "Weight (g)": fc_weight, "Cost (EGP)": fc_price_egp, "Buy": fc["buy_url"]},
+            {"Component": "SBC", "Model": sbc_name, "Weight (g)": sbc_weight, "Cost (EGP)": sbc_price_egp, "Buy": sbc["buy_url"]}
+        ])
+    else:
+        bom_data.append({"Component": "Integrated Board", "Model": int_board_name, "Weight (g)": sbc_weight, "Cost (EGP)": sbc_price_egp, "Buy": int_board["buy_url"]})
+        
+    if esp32_sniffer:
+        bom_data.append({"Component": "ESP32 Sensor", "Model": "SDR Sniffer", "Weight (g)": 25.0, "Cost (EGP)": 0.0, "Buy": ""})
+    if "LiDAR" in lidar_cam:
+        bom_data.append({"Component": "Perception", "Model": "2D LiDAR", "Weight (g)": 45.0, "Cost (EGP)": 0.0, "Buy": ""})
+    elif "Stereo" in lidar_cam:
+        bom_data.append({"Component": "Perception", "Model": "Stereo VIO Depth Camera", "Weight (g)": 75.0, "Cost (EGP)": 0.0, "Buy": ""})
+        
+    st.dataframe(pd.DataFrame(bom_data), column_config={"Buy": st.column_config.LinkColumn("Link ↗")}, use_container_width=True, hide_index=True)

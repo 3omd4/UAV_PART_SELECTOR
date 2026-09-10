@@ -2,13 +2,13 @@
   "MOTORS": {
     "XXD A2212 (1000KV)": {
       "stator": "22 x 12 mm",
-      "weight": 55.0,
+      "weight": 48.0,
       "kv": 1000,
       "cells": [
         3,
         4
       ],
-      "prop": "8\"–10\"",
+      "prop": "8\"\u201310\"",
       "thrust": 900.0,
       "source": "Local (Makers/RAM)",
       "price_egp": 430.0,
@@ -24,7 +24,7 @@
       "cells": [
         4
       ],
-      "prop": "9\"–10\"",
+      "prop": "9\"\u201310\"",
       "thrust": 1050.0,
       "source": "Global / Kit",
       "price_egp": 1182.83,
@@ -60,7 +60,7 @@
         5,
         6
       ],
-      "prop": "4\"–5\"",
+      "prop": "4\"\u20135\"",
       "thrust": 875.0,
       "source": "Global (Specialized RC)",
       "price_egp": 936.95,
@@ -110,7 +110,7 @@
         3,
         4
       ],
-      "prop": "2.5\"–3.5\"",
+      "prop": "2.5\"\u20133.5\"",
       "thrust": 385.0,
       "source": "Global (iFlight/AliExpress)",
       "price_egp": 631.83,
@@ -123,32 +123,32 @@
   "FLIGHT_CONTROLLERS": {
     "Holybro Pixhawk 6C Mini": {
       "mcu": "STM32H743",
-      "weight": 39.2,
+      "weight": 39.0,
       "dim": "53.3 x 39 x 16.2 mm",
       "firmware": "PX4, ArduPilot",
-      "price_egp": 13065.86,
-      "price_usd": 176.99,
-      "notes": "Verified live (Sep 2026): official price corrected from $150 to $176.99; weight refined to 39.2g. Plastic case, dual IMU redundancy.",
-      "buy_url": "https://holybro.com/products/pixhawk-6c-mini"
+      "price_egp": 11073.91,
+      "price_usd": 150.0,
+      "notes": "Full aluminum case, dual IMU redundancy.",
+      "buy_url": "https://holybro.com/"
     },
     "Matek H743-SLIM V3": {
       "mcu": "STM32H743VIH6",
-      "weight": 8.5,
+      "weight": 7.0,
       "dim": "36 x 36 x 5 mm",
       "firmware": "ArduPilot, BetaFlight",
-      "price_egp": 5865.0,
+      "price_egp": 3435.92,
       "price_usd": 115.0,
-      "notes": "Ultra-lightweight bare-PCB, dual IMUs; weight refined to 8.5g (bare board).",
+      "notes": "Ultra-lightweight bare-PCB, dual IMUs.",
       "buy_url": "https://ardupilot.org/"
     },
     "Holybro Kakute H7 Mini": {
       "mcu": "STM32H743",
-      "weight": 8.4,
-      "dim": "29 x 29 mm (20x20mm mount)",
+      "weight": 5.1,
+      "dim": "29 x 29 mm",
       "firmware": "ArduPilot, BetaFlight",
       "price_egp": 3293.61,
       "price_usd": 75.0,
-      "notes": "Compact 20x20mm mounting for small whoops; weight refined to 8.4g.",
+      "notes": "Compact 20x20mm mounting for small whoops.",
       "buy_url": "https://holybro.com/"
     },
     "CUAV Nora+": {
@@ -158,22 +158,21 @@
       "firmware": "PX4, ArduPilot",
       "price_egp": 30305.72,
       "price_usd": 260.0,
-      "notes": "Triple redundant IMU; heavy and expensive. Price un-verified live — flag for re-check before purchase.",
+      "notes": "Triple redundant IMU; heavy and expensive.",
       "buy_url": "https://store.cuav.net/"
     }
   },
   "SBCS": {
-    "NVIDIA Jetson Orin Nano Super (Dev Kit)": {
+    "NVIDIA Jetson Orin Nano (SOM + Carrier)": {
       "cpu": "6-core ARM / 8GB",
-      "ai_tops": 67.0,
+      "ai_tops": 40.0,
       "weight": 75.0,
-      "dim": "100 x 79 x 21 mm",
-      "power_w": 25.0,
-      "price_egp": 19399.0,
-      "price_usd": 249.0,
+      "dim": "100 x 79 x 25 mm",
+      "power_w": 12.0,
+      "price_egp": 35000.0,
+      "price_usd": 449.0,
       "best_for": "Heavy visual SLAM & deep learning.",
-      "notes": "Verified live (Sep 2026): NVIDIA's Oct-2024 'Super' firmware/SKU update raised AI perf from 40 to 67 TOPS and cut official price from $449 to $249 — entry corrected accordingly.",
-      "buy_url": "https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-orin/"
+      "buy_url": "https://www.nvidia.com/"
     },
     "Khadas Edge2 (Maker Kit)": {
       "cpu": "8-core RK3588S / 8GB",
@@ -192,10 +191,9 @@
       "weight": 46.0,
       "dim": "85 x 56 x 15 mm",
       "power_w": 8.0,
-      "price_egp": 4400.0,
+      "price_egp": 14000.0,
       "price_usd": 80.0,
       "best_for": "Ubiquitous ROS 2 nodes, 2D LiDAR SLAM.",
-      "notes": "price_egp corrected — original figure (14000) implied an outlier ~175 EGP/USD markup; re-based to the ~55 EGP/USD range typical of Pi5 local distributors.",
       "buy_url": "https://www.raspberrypi.com/"
     },
     "Radxa Zero 3W": {
@@ -214,26 +212,24 @@
     "ModalAI VOXL 2 Mini": {
       "arch": "True All-in-One (DSP PX4)",
       "compute": "Qualcomm QRB5165",
-      "dim": "42 x 42 mm",
+      "dim": "50 x 50 x 15 mm",
       "weight": 11.0,
       "power_w": 5.0,
-      "price_egp": 59669.49,
-      "price_usd": 1169.99,
+      "price_egp": 63699.0,
+      "price_usd": 1249.0,
       "best_for": "Extreme weight limits; professional edge AI.",
-      "notes": "Verified live (Sep 2026): dimensions corrected to actual 42x42mm (30% smaller than VOXL 2); price corrected to official $1,169.99.",
-      "buy_url": "https://www.modalai.com/products/voxl-2-mini"
+      "buy_url": "https://www.modalai.com/"
     },
     "ModalAI VOXL 2": {
       "arch": "True All-in-One (DSP PX4)",
       "compute": "Qualcomm QRB5165",
-      "dim": "70 x 36 x 15 mm",
+      "dim": "70 x 70 x 15 mm",
       "weight": 16.0,
       "power_w": 6.0,
-      "price_egp": 63749.49,
-      "price_usd": 1249.99,
+      "price_egp": 66249.0,
+      "price_usd": 1299.0,
       "best_for": "High-I/O swarms with multiple stereo sensors.",
-      "notes": "Verified live (Sep 2026): dimensions corrected from 70x70mm to actual 70x36mm; price corrected to official $1,249.99.",
-      "buy_url": "https://www.modalai.com/voxl-2"
+      "buy_url": "https://www.modalai.com/"
     },
     "Holybro Pixhawk Jetson Baseboard": {
       "arch": "Unified Carrier",
@@ -341,7 +337,7 @@
       "wh": 24.4,
       "price_egp": 1783.13,
       "price_usd": 35.0,
-      "dimensions": "78 × 38 × 36 mm",
+      "dimensions": "78 \u00d7 38 \u00d7 36 mm",
       "notes": "High burst C-rating, low capacity.",
       "buy_url": "https://betafpv.com/products/lava-6s-1100mah-lipo-battery"
     },
@@ -354,34 +350,34 @@
       "wh": 34.4,
       "price_egp": 2037.87,
       "price_usd": 40.0,
-      "dimensions": "78 × 37 × 52 mm",
+      "dimensions": "78 \u00d7 37 \u00d7 52 mm",
       "notes": "Racing LiPo; extremely high discharge capability with modest endurance.",
       "buy_url": "https://genstattu.com/tattu-r-line-version-5-0-1550mah-6s-150c-22-2v-lipo-battery-pack-with-xt60-plug/"
     },
     "Lithium Polymer 3S 10400mAh 40C (170mm)": {
       "cells": 3,
       "mah": 10400,
-      "weight_g": 610.0,
+      "weight_g": null,
       "c_rating": 40,
       "voltage": 11.1,
       "wh": 115.4,
       "price_egp": 5100.0,
       "price_usd": 100.1,
-      "dimensions": "170 × 55 × 27 mm",
-      "notes": "Very high-capacity 3S pack for long endurance; heavy and physically large. weight_g estimated from cell density (was null).",
+      "dimensions": "170 \u00d7 55 \u00d7 27 mm",
+      "notes": "Very high-capacity 3S pack for long endurance; heavy and physically large.",
       "buy_url": "https://makerselectronics.com/product/lithium-polymer-battery-11-1v-3s-104/"
     },
     "Lithium Polymer 3S 10400mAh 40C (150mm)": {
       "cells": 3,
       "mah": 10400,
-      "weight_g": 590.0,
+      "weight_g": null,
       "c_rating": 40,
       "voltage": 11.1,
       "wh": 115.4,
       "price_egp": 4500.0,
       "price_usd": 88.33,
-      "dimensions": "150 × 70 × 22 mm",
-      "notes": "High-capacity 3S endurance pack with a shorter but wider form factor. weight_g estimated (was null).",
+      "dimensions": "150 \u00d7 70 \u00d7 22 mm",
+      "notes": "High-capacity 3S endurance pack with a shorter but wider form factor.",
       "buy_url": "https://makerselectronics.com/product/lithium-polymer-battery-11-1-v-10-2/"
     },
     "Lithium Polymer 3S 3300mAh 40C": {
@@ -393,7 +389,7 @@
       "wh": 36.6,
       "price_egp": 1950.0,
       "price_usd": 38.28,
-      "dimensions": "140 × 45 × 21 mm",
+      "dimensions": "140 \u00d7 45 \u00d7 21 mm",
       "notes": "Medium-capacity 3S pack; reasonable balance between endurance and weight.",
       "buy_url": "https://makerselectronics.com/product/polymer-battery-11-1v-3300mah-40c/"
     },
@@ -406,7 +402,7 @@
       "wh": 16.7,
       "price_egp": 1100.0,
       "price_usd": 21.59,
-      "dimensions": "75 × 35 × 25 mm",
+      "dimensions": "75 \u00d7 35 \u00d7 25 mm",
       "notes": "Lightweight 3S battery suitable for smaller drone platforms.",
       "buy_url": "https://makerselectronics.com/product/polymer-battery-11-1v-1500mah-35c/"
     },
@@ -419,7 +415,7 @@
       "wh": 244.2,
       "price_egp": 12000.0,
       "price_usd": 235.54,
-      "dimensions": "180 × 75 × 35 mm",
+      "dimensions": "180 \u00d7 75 \u00d7 35 mm",
       "notes": "Extremely high-capacity endurance pack; very heavy and intended for large platforms.",
       "buy_url": "https://makerselectronics.com/product/lithium-polymer-batter-11-1v-3s-2200/"
     },
@@ -432,7 +428,7 @@
       "wh": 115.4,
       "price_egp": 5100.0,
       "price_usd": 100.1,
-      "dimensions": "160 × 45 × 30 mm",
+      "dimensions": "160 \u00d7 45 \u00d7 30 mm",
       "notes": "High-capacity 3S endurance pack with a relatively narrow form factor.",
       "buy_url": "https://makerselectronics.com/product/lithium-polymer-battery-11-1-v-3s-10/"
     },
@@ -445,7 +441,7 @@
       "wh": 57.7,
       "price_egp": 2750.0,
       "price_usd": 53.98,
-      "dimensions": "145 × 50 × 28 mm",
+      "dimensions": "145 \u00d7 50 \u00d7 28 mm",
       "notes": "Good capacity-to-weight balance for medium-size 3S systems.",
       "buy_url": "https://makerselectronics.com/product/polymer-battery-11-1v-5200mah-40c/"
     },
@@ -458,7 +454,7 @@
       "wh": 24.4,
       "price_egp": null,
       "price_usd": null,
-      "dimensions": "92 × 31 × 19 mm",
+      "dimensions": "92 \u00d7 31 \u00d7 19 mm",
       "notes": "Compact 3S pack suitable for small drones and RC platforms.",
       "buy_url": "https://uge-one.com/product/lithium-polymer-lipo-rechargeable-battery-11-1v-2200mah-40c-for-drone-rc-helicopter/"
     },
@@ -471,7 +467,7 @@
       "wh": 24.4,
       "price_egp": 1850.0,
       "price_usd": 36.31,
-      "dimensions": "108 × 36.5 × 25.5 mm",
+      "dimensions": "108 \u00d7 36.5 \u00d7 25.5 mm",
       "notes": "Compact 3S pack with a relatively high discharge rating.",
       "buy_url": "https://circuits-elec.com/products/super-nano-lithium-polymer-battery-11-1-v-2200-mah-3s"
     },
@@ -484,294 +480,9 @@
       "wh": 88.8,
       "price_egp": 3600.0,
       "price_usd": 70.66,
-      "dimensions": "186 × 65 × 55 mm",
+      "dimensions": "186 \u00d7 65 \u00d7 55 mm",
       "notes": "Heavy endurance pack for large platforms.",
       "buy_url": "https://circuits-elec.com/products/lithium-polymer-battery-11-1-v-10400-mah-40c-pre-ordered"
-    }
-  },
-  "ESCS": {
-    "T-Motor F55A PRO II 4-in-1 (50A)": {
-      "current_a": 50,
-      "weight_g": 11.0,
-      "cells": [
-        3,
-        4,
-        5,
-        6
-      ],
-      "protocol": "DShot600, BLHeli_32",
-      "price_egp": 3315.0,
-      "price_usd": 65.0,
-      "source": "Global (FPV shops)",
-      "notes": "Top pick to drive 4x EMAX ECO II 2207 on the ducted 330mm build; ample headroom above peak draw.",
-      "buy_url": "https://www.getfpv.com/"
-    },
-    "Holybro Tekko32 F4 4-in-1 (45A)": {
-      "current_a": 45,
-      "weight_g": 11.0,
-      "cells": [
-        3,
-        4,
-        5,
-        6
-      ],
-      "protocol": "DShot600, BLHeli_32",
-      "price_egp": 3060.0,
-      "price_usd": 60.0,
-      "source": "Global / Kit",
-      "notes": "Matches the Holybro 2216/X500 kit build; integrates cleanly with Pixhawk 6C Mini.",
-      "buy_url": "https://holybro.com/"
-    },
-    "iFlight SucceX-E 45A 4-in-1": {
-      "current_a": 45,
-      "weight_g": 9.5,
-      "cells": [
-        3,
-        4,
-        5,
-        6
-      ],
-      "protocol": "DShot600, BLHeli_S",
-      "price_egp": 1734.0,
-      "price_usd": 34.0,
-      "source": "Global (iFlight/AliExpress)",
-      "notes": "Budget option for GEPRC/BrotherHobby 3.5-4in cinewhoop builds.",
-      "buy_url": "https://ar.aliexpress.com/"
-    },
-    "BLHeli_32 35A Mini ESC (Single)": {
-      "current_a": 35,
-      "weight_g": 5.0,
-      "cells": [
-        3,
-        4,
-        5,
-        6
-      ],
-      "protocol": "DShot600, BLHeli_32",
-      "price_egp": 612.0,
-      "price_usd": 12.0,
-      "source": "Global (AliExpress)",
-      "notes": "One per motor for T-Motor F2203.5 micro-lifter builds where a 4-in-1 won't fit.",
-      "buy_url": "https://ar.aliexpress.com/"
-    },
-    "Holybro Kotleta20 4-in-1 (20A)": {
-      "current_a": 20,
-      "weight_g": 6.7,
-      "cells": [
-        2,
-        3,
-        4
-      ],
-      "protocol": "DShot600, BLHeli_S",
-      "price_egp": 1275.0,
-      "price_usd": 25.0,
-      "source": "Global / Kit",
-      "notes": "Right-sized, low-draw ESC for iFlight XING2 1404 toothpick-class builds.",
-      "buy_url": "https://holybro.com/"
-    }
-  },
-  "PROPELLERS": {
-    "Gemfan 5152 Tri-Blade (5\")": {
-      "size": "5\"",
-      "pitch_in": 5.2,
-      "blades": 3,
-      "material": "Polycarbonate",
-      "weight_g": 4.3,
-      "compatible_motor": "EMAX ECO II 2207",
-      "price_egp": 178.5,
-      "price_usd": 3.5,
-      "source": "Global (Gemfan/AliExpress)",
-      "notes": "Standard freestyle pairing for the ducted 330mm swarm baseline.",
-      "buy_url": "https://ar.aliexpress.com/"
-    },
-    "HQProp 3.5X3.5X3 (3.5\")": {
-      "size": "3.5\"",
-      "pitch_in": 3.5,
-      "blades": 3,
-      "material": "Polycarbonate",
-      "weight_g": 2.1,
-      "compatible_motor": "GEPRC SPEEDX2 2105.5",
-      "price_egp": 153.0,
-      "price_usd": 3.0,
-      "source": "Global (HQProp)",
-      "notes": "Matches CineLog35 / Pavo35 ducted cinewhoop frames.",
-      "buy_url": "https://www.getfpv.com/"
-    },
-    "Gemfan 2540 Tri-Blade (2.5\")": {
-      "size": "2.5\"",
-      "pitch_in": 4.0,
-      "blades": 3,
-      "material": "Polycarbonate",
-      "weight_g": 1.1,
-      "compatible_motor": "iFlight XING2 1404",
-      "price_egp": 142.8,
-      "price_usd": 2.8,
-      "source": "Global (Gemfan)",
-      "notes": "Micro toothpick prop; confirms XING2 1404 is too weak for SBC payloads.",
-      "buy_url": "https://www.getfpv.com/"
-    },
-    "T-Motor T4030 Bi-Blade (4\")": {
-      "size": "4\"",
-      "pitch_in": 3.0,
-      "blades": 2,
-      "material": "Carbon-reinforced polycarbonate",
-      "weight_g": 3.2,
-      "compatible_motor": "BrotherHobby Avenger 2004",
-      "price_egp": 204.0,
-      "price_usd": 4.0,
-      "source": "Global (T-Motor)",
-      "notes": "Bi-blade for higher efficiency on the 4in freestyle build.",
-      "buy_url": "https://www.getfpv.com/"
-    },
-    "APC 10x4.5 SF (10\")": {
-      "size": "10\"",
-      "pitch_in": 4.5,
-      "blades": 2,
-      "material": "Composite",
-      "weight_g": 11.0,
-      "compatible_motor": "Holybro 2216 (920KV)",
-      "price_egp": 255.0,
-      "price_usd": 5.0,
-      "source": "Global / Kit",
-      "notes": "Stock X500 V2 prop; efficient slow-flight for endurance legs.",
-      "buy_url": "https://www.apcprop.com/"
-    }
-  },
-  "GPS_MODULES": {
-    "Holybro Micro M9N GPS/Compass": {
-      "chipset": "u-blox M9N + IST8310",
-      "weight_g": 7.3,
-      "accuracy_m": 1.5,
-      "update_rate_hz": 25,
-      "price_egp": 4049.1,
-      "price_usd": 44.99,
-      "source": "Global / Kit",
-      "notes": "Verified live (Sep 2026), $44.99. Direct plug for Pixhawk 6C Mini GPS1 port; adequate for hybrid indoor/outdoor legs.",
-      "buy_url": "https://www.getfpv.com/holybro-micro-m9n-gps-module-w-case.html"
-    },
-    "Holybro Micro M10 GPS/Compass": {
-      "chipset": "u-blox M10 + IST8310",
-      "weight_g": 6.0,
-      "accuracy_m": 2.5,
-      "update_rate_hz": 10,
-      "price_egp": 2691.0,
-      "price_usd": 29.9,
-      "source": "Global / Kit",
-      "notes": "Budget GPS for backup/redundant units across the swarm.",
-      "buy_url": "https://holybro.com/"
-    },
-    "Holybro H-RTK F9P Rover": {
-      "chipset": "u-blox F9P (RTK)",
-      "weight_g": 19.0,
-      "accuracy_m": 0.01,
-      "update_rate_hz": 10,
-      "price_egp": 27450.0,
-      "price_usd": 305.0,
-      "source": "Global (Specialized)",
-      "notes": "Centimeter-level fix for outdoor validation flights; overkill for indoor swarm ops.",
-      "buy_url": "https://holybro.com/"
-    }
-  },
-  "RC_LINK": {
-    "RadioMaster TX16S Mk II Transmitter": {
-      "type": "Handheld TX",
-      "weight_g": 659.0,
-      "protocol": "ELRS / CRSF / multi-module",
-      "price_egp": 19799.1,
-      "price_usd": 219.99,
-      "source": "Global (RadioMaster)",
-      "notes": "Ground-station transmitter for manual override across the whole swarm.",
-      "buy_url": "https://www.radiomasterrc.com/"
-    },
-    "Happymodel EP2 ELRS Receiver (2.4GHz)": {
-      "type": "Receiver",
-      "weight_g": 1.2,
-      "protocol": "ExpressLRS",
-      "price_egp": 1439.1,
-      "price_usd": 15.99,
-      "source": "Global (BetaFPV/AliExpress)",
-      "notes": "Ultra-light open-source link; ideal per-drone receiver for a tight swarm.",
-      "buy_url": "https://ar.aliexpress.com/"
-    },
-    "Holybro SiK Telemetry Radio V3 (915/433MHz)": {
-      "type": "Telemetry radio pair",
-      "weight_g": 16.0,
-      "protocol": "MAVLink over SiK",
-      "price_egp": 3150.0,
-      "price_usd": 35.0,
-      "source": "Global / Kit",
-      "notes": "Long-range MAVLink link to GCS for logging and health monitoring outdoors.",
-      "buy_url": "https://holybro.com/"
-    }
-  },
-  "COMPANION_SENSORS": {
-    "Raspberry Pi Camera Module 3 (Wide)": {
-      "type": "RGB camera",
-      "resolution": "12MP, 120° FoV",
-      "weight_g": 4.0,
-      "interface": "MIPI CSI-2",
-      "price_egp": 3150.0,
-      "price_usd": 35.0,
-      "source": "Global / Kit",
-      "notes": "Primary sensor for the HLS-edge + SORT flag-detection pipeline running on the companion SBC.",
-      "buy_url": "https://www.raspberrypi.com/"
-    },
-    "Intel RealSense D435i Depth Camera": {
-      "type": "Stereo depth + IMU",
-      "resolution": "1280x720 depth @30fps",
-      "weight_g": 72.0,
-      "interface": "USB 3.0",
-      "price_egp": 31410.0,
-      "price_usd": 349.0,
-      "source": "Global (Specialized)",
-      "notes": "Adds depth/VIO for indoor obstacle avoidance and sand-model robustness testing; heavy for the 330mm ducted frame.",
-      "buy_url": "https://www.intelrealsense.com/"
-    },
-    "Benewake TFmini-S LiDAR": {
-      "type": "Single-point ToF LiDAR",
-      "resolution": "12m range, 0.01m res",
-      "weight_g": 5.0,
-      "interface": "UART / I2C",
-      "price_egp": 3591.0,
-      "price_usd": 39.9,
-      "source": "Global / Kit",
-      "notes": "Lightweight rangefinder for altitude hold in GPS-denied indoor flight.",
-      "buy_url": "https://www.getfpv.com/"
-    },
-    "RPLiDAR A1M8 2D LiDAR": {
-      "type": "360° 2D LiDAR",
-      "resolution": "12m range, 5.5-10Hz scan",
-      "weight_g": 190.0,
-      "interface": "UART / USB",
-      "price_egp": 8910.0,
-      "price_usd": 99.0,
-      "source": "Global / Kit",
-      "notes": "Good for a Raspberry Pi 5-based 2D SLAM node; too heavy for sub-250g frames.",
-      "buy_url": "https://www.slamtec.com/"
-    }
-  },
-  "POWER_DISTRIBUTION": {
-    "Holybro PM06 Power Module (14S)": {
-      "current_rating_a": 120,
-      "cells": "2S–14S",
-      "weight_g": 25.0,
-      "outputs": "XT60 in/out, I2C battery monitor",
-      "price_egp": 3150.0,
-      "price_usd": 35.0,
-      "source": "Global / Kit",
-      "notes": "Feeds Pixhawk 6C Mini regulated 5V and battery telemetry.",
-      "buy_url": "https://holybro.com/"
-    },
-    "Matek PDB-XT60 (with BEC)": {
-      "current_rating_a": 184,
-      "cells": "3S–6S",
-      "weight_g": 8.0,
-      "outputs": "4x ESC pads, 5V/12V BEC",
-      "price_egp": 612.0,
-      "price_usd": 12.0,
-      "source": "Global (Matek/AliExpress)",
-      "notes": "Compact PDB sized for the custom 330mm ducted build.",
-      "buy_url": "https://ar.aliexpress.com/"
     }
   }
 }

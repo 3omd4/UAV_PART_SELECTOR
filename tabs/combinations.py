@@ -219,7 +219,7 @@ def render_combinations_tab():
             df_combos, 
             use_container_width=True,
             on_select="rerun",
-            selection_mode="single_row",
+            selection_mode="single-row", # FIXED: Streamlit expects a hyphen
             hide_index=True,
             column_config={
                 "_FC": None,  # Hidden metadata

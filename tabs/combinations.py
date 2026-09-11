@@ -34,6 +34,17 @@ MAX_ROWS = 200_000           # valid result rows kept
 TRIPLE_WARN_THRESHOLD = 2_000_000
 
 
+def _num(d, key, default=0.0):
+    """dict.get(key, default) only applies `default` when the KEY is
+    missing -- not when the value is explicitly None. The catalogs use
+    null for a lot of unpopulated numeric fields (same root cause as the
+    `ducted` bug below), so every numeric field read in the solver goes
+    through this instead of a bare .get() to avoid `None + float` /
+    `None * int` crashes."""
+    v = d.get(key, default)
+    return default if v is None else v
+
+
 class _EnumerationTruncated(Exception):
     """Raised internally to unwind all three nested loops in one shot
     once a safety cap is hit. Caught once, at the top of the function."""
@@ -88,10 +99,10 @@ def _enumerate_valid_combos(
                 "_FC": fc_name,
                 "_SBC": sbc_name,
                 "_IntBoard": None,
-                "weight": fc.get("weight", 0) + sbc.get("weight", 0),
-                "price_egp": fc.get("price_egp", 0) + sbc.get("price_egp", 0),
-                "power_w": sbc.get("power_w", 0),
-                "ai_tops": sbc.get("ai_tops", 0.0),
+                "weight": _num(fc, "weight") + _num(sbc, "weight"),
+                "price_egp": _num(fc, "price_egp") + _num(sbc, "price_egp"),
+                "power_w": _num(sbc, "power_w"),
+                "ai_tops": _num(sbc, "ai_tops"),
             })
     for int_name, int_b in _INTEGRATED_BOARDS.items():
         ai_val = int_b.get("ai_compute_tops")
@@ -104,9 +115,9 @@ def _enumerate_valid_combos(
             "_FC": None,
             "_SBC": None,
             "_IntBoard": int_name,
-            "weight": int_b.get("weight", 0),
-            "price_egp": int_b.get("price_egp", 0),
-            "power_w": int_b.get("power_w", 0),
+            "weight": _num(int_b, "weight"),
+            "price_egp": _num(int_b, "price_egp"),
+            "power_w": _num(int_b, "power_w"),
             "ai_tops": float(ai_val),
         })
 
@@ -133,9 +144,9 @@ def _enumerate_valid_combos(
     try:
         for f_name, frame in _FRAMES.items():
             f_wt = frame.get("weight_g") or frame.get("weight") or 0.0
-            n_mot = frame.get("motor_count", 4)
-            f_pl = frame.get("payload_limit_g", 500)
-            f_wb = frame.get("wheelbase_mm", 300)
+            n_mot = int(_num(frame, "motor_count", 4))
+            f_pl = _num(frame, "payload_limit_g", 500)
+            f_wb = _num(frame, "wheelbase_mm", 300)
 
             # ---- Bug fix (Tier-1 audit finding) ----
             # frame.get("ducted", True) only applies the default when the
@@ -149,15 +160,15 @@ def _enumerate_valid_combos(
             f_ducted_raw = frame.get("ducted")
             f_ducted = True if f_ducted_raw is None else f_ducted_raw
 
-            f_price = frame.get("price_egp", 0)
+            f_price = _num(frame, "price_egp")
 
             for m_name, motor in _MOTORS.items():
-                m_wt = motor.get("weight", 0)
-                m_thr = motor.get("thrust", 0) * n_mot
-                m_eff = motor.get("efficiency_hover_gw", 1.0)
-                m_price = motor.get("price_egp", 0) * n_mot
-                m_cells = motor.get("cells", [])
-                m_max_a = motor.get("max_current_a", 0)
+                m_wt = _num(motor, "weight")
+                m_thr = _num(motor, "thrust") * n_mot
+                m_eff = _num(motor, "efficiency_hover_gw", 1.0)
+                m_price = _num(motor, "price_egp") * n_mot
+                m_cells = motor.get("cells") or []
+                m_max_a = _num(motor, "max_current_a")
 
                 for b_name, batt in _BATTERIES.items():
                     triples_scanned += 1
@@ -168,16 +179,16 @@ def _enumerate_valid_combos(
                             "filters above and re-run"
                         )
 
-                    b_cells = batt.get("cells", 3)
+                    b_cells = _num(batt, "cells", 3)
                     if b_cells not in m_cells and m_cells:
                         continue
 
                     b_wt = batt.get("weight_g") or batt.get("weight") or 0.0
-                    b_mah = batt.get("mah", 0)
-                    b_c = batt.get("c_rating", 1)
-                    b_volt = batt.get("voltage", 11.1)
-                    b_wh = batt.get("wh", 0)
-                    b_price = batt.get("price_egp", 0)
+                    b_mah = _num(batt, "mah")
+                    b_c = _num(batt, "c_rating", 1)
+                    b_volt = _num(batt, "voltage", 11.1)
+                    b_wh = _num(batt, "wh")
+                    b_price = _num(batt, "price_egp")
 
                     max_disc_amps = (b_mah / 1000.0) * b_c
                     prop_wt = (m_wt * n_mot) + esc_wiring_weight
@@ -387,7 +398,7 @@ def _filter_by_min(catalog, field, min_val, include_unknown=True, name_hint=None
 def _filter_by_max_price(catalog, max_price):
     if max_price is None:
         return catalog
-    return {k: v for k, v in catalog.items() if v.get("price_egp", 0) <= max_price}
+    return {k: v for k, v in catalog.items() if _num(v, "price_egp") <= max_price}
 
 
 def render_combinations_tab():

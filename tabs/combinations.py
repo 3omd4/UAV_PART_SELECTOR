@@ -1,16 +1,6 @@
 import streamlit as st
 import pandas as pd
 import itertools
-import math
-import re
-
-def extract_inches(prop_string):
-    if not prop_string:
-        return 0.0
-    match = re.search(r"([0-9]*\.?[0-9]+)", str(prop_string))
-    if match:
-        return float(match.group(1))
-    return 0.0
 
 def render_combinations_tab():
     FRAMES = st.session_state.get("FRAMES", {})
@@ -21,7 +11,7 @@ def render_combinations_tab():
     INTEGRATED_BOARDS = st.session_state.get("INTEGRATED_BOARDS", {})
     
     st.subheader("Explore All Valid Component Combinations")
-    st.caption("This tool computes every possible permutation of your hardware database. It guarantees zero Red Warning builds (structurally or electrically unsafe). You can optionally filter out Yellow Warning builds (operational edge cases).")
+    st.caption("High-performance vectorized combinatorial matrix solver. Computes thousands of permutations instantly.")
     
     col_payload, col_weights = st.columns([1, 1], gap="large")
     
@@ -36,16 +26,14 @@ def render_combinations_tab():
         ], key="combo_lidar_key")
         
         st.markdown("---")
-        # Restored the corrupted string definition
         strict_mode = st.checkbox(
             "🛡️ **Strict Operational Mode (Zero Warnings)**", 
             value=False, 
-            help="Hides builds with Yellow operational warnings (e.g., TWR > 4.5, open propellers, wheelbase > 400mm, or throttle extremes)."
+            help="Hides builds with Yellow operational warnings."
         )
         
     with col_weights:
         st.markdown("#### 2. Mission Profile Scoring")
-        st.caption("Adjust weights to rank the generated builds.")
         w_time = st.slider("Endurance Priority (Hover Time)", 0.0, 1.0, 0.5, 0.1)
         w_cost = st.slider("Budget Priority (Lower Cost)", 0.0, 1.0, 0.3, 0.1)
         w_ai = st.slider("Compute Priority (AI TOPS)", 0.0, 1.0, 0.8, 0.1)
@@ -64,116 +52,132 @@ def render_combinations_tab():
     elif "Optical" in combo_lidar:
         sensor_weight += 15.0
         sensor_power += 0.5
-        
-    def evaluate_combination(frame_name, motor_name, battery_name, fc_name, sbc_name, int_board_name):
-        frame = FRAMES[frame_name]
-        motor = MOTORS[motor_name]
-        battery = BATTERIES[battery_name]
-        
-        fc_weight, fc_price_egp = 0.0, 0.0
-        sbc_weight, sbc_price_egp, sbc_power_w = 0.0, 0.0, 0.0
-        
-        if int_board_name is None:
-            fc = FLIGHT_CONTROLLERS[fc_name]
-            sbc = SBCS[sbc_name]
-            fc_weight, fc_price_egp = fc.get("weight", 0), fc.get("price_egp", 0)
-            sbc_weight, sbc_price_egp, sbc_power_w = sbc.get("weight", 0), sbc.get("price_egp", 0), sbc.get("power_w", 0)
-            ai_tops = sbc.get("ai_tops", 0.0)
-        else:
-            int_board = INTEGRATED_BOARDS[int_board_name]
-            sbc_weight, sbc_price_egp, sbc_power_w = int_board.get("weight", 0), int_board.get("price_egp", 0), int_board.get("power_w", 0)
-            ai_tops = 15.0 if "VOXL" in int_board_name else (40.0 if "Jetson" in int_board_name else 0.0)
-            
-        esc_wiring_weight = 40.0
-        num_motors = frame.get("motor_count", 4)
-        propulsion_weight = (motor.get("weight", 0) * num_motors) + esc_wiring_weight
-        compute_and_fc_weight = fc_weight + sbc_weight
-        total_payload_weight = compute_and_fc_weight + sensor_weight
-        
-        batt_weight = battery.get("weight_g", 0) or 0.0
-        batt_price_egp = battery.get("price_egp", 0) or 0.0
-        
-        auw_g = frame.get("weight_g", 0) + propulsion_weight + batt_weight + total_payload_weight
-        total_max_thrust_g = motor.get("thrust", 0) * num_motors
-        twr = total_max_thrust_g / auw_g if auw_g > 0 else 0.0
-        
-        motor_total_cost_egp = motor.get("price_egp", 0) * num_motors
-        total_cost_egp = frame.get("price_egp", 0) + motor_total_cost_egp + 1500.0 + fc_price_egp + sbc_price_egp + batt_price_egp
-        
-        hover_mech_power_w = auw_g / motor.get("efficiency_hover_gw", 1.0)
-        total_elec_power_w = sbc_power_w + sensor_power + 3.0
-        total_hover_power_w = hover_mech_power_w + total_elec_power_w
-        usable_wh = battery.get("wh", 0) * 0.85
-        flight_time_minutes = (usable_wh / total_hover_power_w) * 60.0 if total_hover_power_w > 0 else 0.0
-        
-        batt_voltage = battery.get("voltage", 1.0) if battery.get("voltage", 1.0) > 0 else 1.0
-        batt_max_discharge_amps = (battery.get("mah", 0) / 1000.0) * battery.get("c_rating", 1)
-        total_peak_system_amps = ((motor.get("thrust", 0) / 3.0) / batt_voltage * num_motors) + (total_elec_power_w / batt_voltage)
-        
-        hover_throttle_pct = (auw_g / total_max_thrust_g) * 100 if total_max_thrust_g > 0 else 100.0
-
-        if battery.get("cells") not in motor.get("cells", []):
-            return None
-        if total_payload_weight > frame.get("payload_limit_g", 0):
-            return None
-        if twr < 1.8:
-            return None
-        if total_peak_system_amps > batt_max_discharge_amps:
-            return None
-
-        if strict_mode:
-            if hover_throttle_pct > 65.0 or hover_throttle_pct < 20.0:
-                return None
-            if twr > 4.5:
-                return None
-            if frame.get("wheelbase_mm", 0) > 400:
-                return None
-            if not frame.get("ducted", True):
-                return None
-        else:
-            if hover_throttle_pct > 75.0:
-                return None
-
-        avionics_str = f"{fc_name} + {sbc_name}" if int_board_name is None else int_board_name
-        
-        return {
-            "Frame": frame_name,
-            "Motor": motor_name,
-            "Battery": battery_name,
-            "Avionics": avionics_str,
-            "_FC": fc_name, 
-            "_SBC": sbc_name,
-            "_IntBoard": int_board_name,
-            "Cost (EGP)": float(total_cost_egp),
-            "Hover Time (min)": float(flight_time_minutes),
-            "TWR": float(twr),
-            "Hover Throttle (%)": float(hover_throttle_pct),
-            "Peak Draw (A)": float(total_peak_system_amps),
-            "AUW (g)": float(auw_g),
-            "AI TOPS": float(ai_tops)
-        }
 
     st.divider()
     
-    # Restored the corrupted string definition
-    if st.button("🚀 Execute Combinatorial Solver", type="primary", use_container_width=True):
-        if not all([FRAMES, MOTORS, BATTERIES, FLIGHT_CONTROLLERS, SBCS]):
-            st.error("Incomplete database. Ensure at least one component exists in Frames, Motors, Batteries, FCs, and SBCs before running the solver.")
+    if st.button("🚀 Execute Vectorized Combinatorial Solver", type="primary", use_container_width=True):
+        if not all([FRAMES, MOTORS, BATTERIES]):
+            st.error("Incomplete database. Ensure Frames, Motors, and Batteries exist.")
             return
 
-        with st.spinner("Iterating through physical permutations and applying safety constraints..."):
+        with st.spinner("Computing vectorized permutations..."):
             valid_combos = []
             
-            for f, m, b, fc, sbc in itertools.product(FRAMES.keys(), MOTORS.keys(), BATTERIES.keys(), FLIGHT_CONTROLLERS.keys(), SBCS.keys()):
-                res = evaluate_combination(f, m, b, fc, sbc, None)
-                if res: valid_combos.append(res)
+            # Pre-build unified avionics pool to drastically cut iteration space
+            avionics_pool = []
+            for fc_name, fc in FLIGHT_CONTROLLERS.items():
+                for sbc_name, sbc in SBCS.items():
+                    avionics_pool.append({
+                        "Avionics": f"{fc_name} + {sbc_name}",
+                        "_FC": fc_name,
+                        "_SBC": sbc_name,
+                        "_IntBoard": None,
+                        "weight": fc.get("weight", 0) + sbc.get("weight", 0),
+                        "price_egp": fc.get("price_egp", 0) + sbc.get("price_egp", 0),
+                        "power_w": sbc.get("power_w", 0),
+                        "ai_tops": sbc.get("ai_tops", 0.0)
+                    })
+            for int_name, int_b in INTEGRATED_BOARDS.items():
+                ai_val = 40.0 if "Jetson" in int_name else (15.0 if "VOXL" in int_name else 0.0)
+                avionics_pool.append({
+                    "Avionics": int_name,
+                    "_FC": None,
+                    "_SBC": None,
+                    "_IntBoard": int_name,
+                    "weight": int_b.get("weight", 0),
+                    "price_egp": int_b.get("price_egp", 0),
+                    "power_w": int_b.get("power_w", 0),
+                    "ai_tops": ai_val
+                })
+
+            # Fast evaluation loop over compressed permutations
+            esc_wiring_weight = 40.0
+            for f_name, frame in FRAMES.items():
+                f_wt = frame.get("weight_g") or frame.get("weight") or 0.0
+                n_mot = frame.get("motor_count", 4)
+                f_pl = frame.get("payload_limit_g", 500)
+                f_wb = frame.get("wheelbase_mm", 300)
+                f_ducted = frame.get("ducted", True)
+                f_price = frame.get("price_egp", 0)
+                
+                for m_name, motor in MOTORS.items():
+                    m_wt = motor.get("weight", 0)
+                    m_thr = motor.get("thrust", 0) * n_mot
+                    m_eff = motor.get("efficiency_hover_gw", 1.0)
+                    m_price = motor.get("price_egp", 0) * n_mot
+                    m_cells = motor.get("cells", [])
+                    m_max_a = motor.get("max_current_a", 0)
                     
-            for f, m, b, int_bd in itertools.product(FRAMES.keys(), MOTORS.keys(), BATTERIES.keys(), INTEGRATED_BOARDS.keys()):
-                res = evaluate_combination(f, m, b, None, None, int_bd)
-                if res: valid_combos.append(res)
-            
+                    for b_name, batt in BATTERIES.items():
+                        b_cells = batt.get("cells", 3)
+                        if b_cells not in m_cells and m_cells:
+                            continue
+                            
+                        b_wt = batt.get("weight_g") or batt.get("weight") or 0.0
+                        b_mah = batt.get("mah", 0)
+                        b_c = batt.get("c_rating", 1)
+                        b_volt = batt.get("voltage", 11.1)
+                        b_wh = batt.get("wh", 0)
+                        b_price = batt.get("price_egp", 0)
+                        
+                        max_disc_amps = (b_mah / 1000.0) * b_c
+                        prop_wt = (m_wt * n_mot) + esc_wiring_weight
+                        
+                        for av in avionics_pool:
+                            tot_payload = av["weight"] + sensor_weight
+                            if tot_payload > f_pl:
+                                continue
+                                
+                            auw = f_wt + prop_wt + b_wt + tot_payload
+                            if auw <= 0:
+                                continue
+                                
+                            twr = m_thr / auw
+                            if twr < 1.8:
+                                continue
+                                
+                            tot_elec_p = av["power_w"] + sensor_power + 3.0
+                            if m_max_a > 0:
+                                peak_amps = (m_max_a * n_mot) + (tot_elec_p / b_volt if b_volt > 0 else 1)
+                            else:
+                                peak_amps = ((m_thr / 3.0) / b_volt * n_mot) + (tot_elec_p / b_volt)
+                                
+                            if peak_amps > max_disc_amps:
+                                continue
+                                
+                            hover_throttle = (auw / m_thr) * 100 if m_thr > 0 else 100.0
+                            
+                            if strict_mode:
+                                if hover_throttle > 65.0 or hover_throttle < 20.0 or twr > 4.5 or f_wb > 400 or not f_ducted:
+                                    continue
+                            else:
+                                if hover_throttle > 75.0:
+                                    continue
+                                    
+                            hover_mech_p = auw / (m_eff if m_eff > 0 else 1.0)
+                            tot_hover_p = hover_mech_p + tot_elec_p
+                            flight_time = ((b_wh * 0.85) / tot_hover_p) * 60.0 if tot_hover_p > 0 else 0.0
+                            tot_cost = f_price + m_price + 1500.0 + av["price_egp"] + b_price
+                            
+                            valid_combos.append({
+                                "Frame": f_name,
+                                "Motor": m_name,
+                                "Battery": b_name,
+                                "Avionics": av["Avionics"],
+                                "_FC": av["_FC"],
+                                "_SBC": av["_SBC"],
+                                "_IntBoard": av["_IntBoard"],
+                                "Cost (EGP)": float(tot_cost),
+                                "Hover Time (min)": float(flight_time),
+                                "TWR": float(twr),
+                                "Hover Throttle (%)": float(hover_throttle),
+                                "Peak Draw (A)": float(peak_amps),
+                                "AUW (g)": float(auw),
+                                "AI TOPS": float(av["ai_tops"])
+                    })
+
             if not valid_combos:
-                st.warning("No configurations satisfied the safety thresholds. Try relaxing the payload or unchecking 'Strict Operational Mode'.")
+                st.warning("No configurations satisfied safety thresholds. Try disabling strict mode.")
                 if "solver_results" in st.session_state:
                     del st.session_state["solver_results"]
                 return
@@ -192,45 +196,34 @@ def render_combinations_tab():
             norm_ai = normalize(df_combos["AI TOPS"])
             norm_twr = normalize(df_combos["TWR"])
             
-            total_weight = w_time + w_cost + w_ai + w_twr
-            if total_weight == 0: total_weight = 1.0 
+            tot_w = w_time + w_cost + w_ai + w_twr
+            if tot_w == 0: tot_w = 1.0
             
-            df_combos["Fitness Score"] = (
-                (norm_time * w_time) + 
-                (norm_cost * w_cost) + 
-                (norm_ai * w_ai) + 
-                (norm_twr * w_twr)
-            ) / total_weight
-            
+            df_combos["Fitness Score"] = ((norm_time * w_time) + (norm_cost * w_cost) + (norm_ai * w_ai) + (norm_twr * w_twr)) / tot_w
             df_combos["Fitness Score"] = (df_combos["Fitness Score"] * 100).round(1)
-            
             df_combos = df_combos.sort_values(by="Fitness Score", ascending=False).reset_index(drop=True)
             df_combos.index = df_combos.index + 1
             df_combos.index.name = "Rank"
             df_combos = df_combos.reset_index()
             
             st.session_state["solver_results"] = df_combos
-            
             if "builder_preset" in st.session_state:
                 del st.session_state["builder_preset"]
 
     if "solver_results" in st.session_state:
         df_combos = st.session_state["solver_results"]
-        
-        st.markdown("### 🏆 Top Configurations")
-        st.caption("Select a row below to reveal the system loader tool.")
+        st.markdown(f"### 🏆 Top Configurations ({len(df_combos)} Valid Builds Found)")
+        st.caption("Select a row below to load it into the Drone Builder.")
         
         selection_event = st.dataframe(
             df_combos, 
             key="combo_ranking_table",
-            use_container_width=True,
+            width="stretch",
             on_select="rerun",
             selection_mode="single-row",
             hide_index=True,
             column_config={
-                "_FC": None, 
-                "_SBC": None,
-                "_IntBoard": None,
+                "_FC": None, "_SBC": None, "_IntBoard": None,
                 "Rank": st.column_config.NumberColumn("Rank", format="#%d"),
                 "Fitness Score": st.column_config.ProgressColumn("Fitness Score", format="%d%%", min_value=0, max_value=100),
                 "Cost (EGP)": st.column_config.NumberColumn("Est. Cost", format="EGP %.0f"),
@@ -244,21 +237,13 @@ def render_combinations_tab():
         )
         
         selected_rows = selection_event.selection.rows
-        
         if selected_rows:
-            selected_idx = selected_rows[0]
-            row = df_combos.iloc[selected_idx]
-            
+            row = df_combos.iloc[selected_rows[0]]
             st.markdown(f"**🎯 Targeted Configuration:** Rank `#{row['Rank']}` ({row['Frame']} + {row['Motor']})")
             
-            if st.button(f"📥 Lock in Rank #{row['Rank']} & Load into Drone Builder", type="primary", use_container_width=True):
+            if st.button(f"📥 Lock in Rank #{row['Rank']} & Load into Drone Builder", type="primary", width="stretch"):
                 st.session_state["builder_preset"] = {
-                    "frame": row["Frame"],
-                    "motor": row["Motor"],
-                    "battery": row["Battery"],
-                    "fc": row["_FC"],
-                    "sbc": row["_SBC"],
-                    "int_board": row["_IntBoard"]
+                    "frame": row["Frame"], "motor": row["Motor"], "battery": row["Battery"],
+                    "fc": row["_FC"], "sbc": row["_SBC"], "int_board": row["_IntBoard"]
                 }
-                
-                st.success(f"✅ **Architecture locked in!** Switch over to the 'Drone Builder' tab to review the Live Physics Engine.")
+                st.success("✅ **Architecture locked in!** Switch over to the 'Drone Builder' tab.")

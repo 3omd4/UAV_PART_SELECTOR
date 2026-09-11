@@ -4,27 +4,59 @@ import numpy as np
 import math
 
 def process_catalog_df(db_dict, search_query):
-    """Converts the session state dictionary to a DataFrame and applies global search."""
+    """Converts the session state dictionary to a DataFrame, merges duplicate columns, and applies global search."""
     if not db_dict:
         return pd.DataFrame()
         
     df = pd.DataFrame.from_dict(db_dict, orient="index").reset_index()
     df.rename(columns={"index": "Model"}, inplace=True)
     
+    # --- SMART COLUMN MERGING (COALESCING) ---
+    # Merge duplicate or overlapping data columns into unified single fields
+    
+    # 1. Weight Merge: Combine 'weight' and 'weight_g'
+    if "weight" in df.columns and "weight_g" in df.columns:
+        df["weight"] = df["weight"].combine_first(df["weight_g"])
+        df.drop(columns=["weight_g"], inplace=True)
+    elif "weight_g" in df.columns and "weight" not in df.columns:
+        df.rename(columns={"weight_g": "weight"}, inplace=True)
+
+    # 2. Price Merge: Combine 'price_usd', 'price', and 'cost'
+    price_cols = [c for c in ["price_usd", "price", "cost"] if c in df.columns]
+    if len(price_cols) > 1:
+        base_col = price_cols[0]
+        for other_col in price_cols[1:]:
+            df[base_col] = df[base_col].combine_first(df[other_col])
+            df.drop(columns=[other_col], inplace=True)
+        if base_col != "price_usd":
+            df.rename(columns={base_col: "price_usd"}, inplace=True)
+            
+    # Calculate EGP dynamically if missing
+    if "price_usd" in df.columns and "price_egp" not in df.columns:
+        df["price_egp"] = df["price_usd"] * 50.0
+    elif "price_egp" in df.columns and "price_usd" in df.columns:
+        df["price_usd"] = df["price_usd"].combine_first(df["price_egp"] / 50.0)
+
+    # 3. Vendor URL Merge: Combine 'buy_url', 'url', 'link', 'website', 'store_url'
+    url_cols = [c for c in ["buy_url", "url", "link", "website", "store_url"] if c in df.columns]
+    if len(url_cols) > 1:
+        for other_col in url_cols[1:]:
+            df["buy_url"] = df["buy_url"].combine_first(df[other_col])
+            df.drop(columns=[other_col], inplace=True)
+    elif "url" in df.columns and "buy_url" not in df.columns:
+        df.rename(columns={"url": "buy_url"}, inplace=True)
+
     # --- PYARROW SANITIZATION ---
-    # Safe null checker that does not trigger array-broadcasting ValueError
     def is_scalar_nan(val):
         return val is None or (isinstance(val, float) and math.isnan(val))
 
     for col in df.columns:
         if col == "cells":
-            # Safely cast arrays/tuples to lists, wrap scalars, and ignore true nulls
             df[col] = df[col].apply(
                 lambda x: list(x) if isinstance(x, (list, tuple, np.ndarray)) 
                 else ([] if is_scalar_nan(x) else [x])
             )
         elif df[col].dtype == 'object':
-            # Force all mixed-type object columns into safe strings, completely bypassing pd.notnull
             df[col] = df[col].apply(lambda x: None if is_scalar_nan(x) else str(x))
     
     # Apply search filter if query exists
@@ -137,7 +169,7 @@ def render_catalogs_tab():
                     "c_rating": st.column_config.NumberColumn("Discharge Rate", format="%d C"),
                     "wh": st.column_config.NumberColumn("Energy", format="%.1f Wh"),
                     "voltage": st.column_config.NumberColumn("Nominal Voltage", format="%.1f V"),
-                    "weight_g": st.column_config.NumberColumn("Weight", format="%.1f g"),
+                    "weight": st.column_config.NumberColumn("Weight", format="%.1f g"),
                     "dimensions": st.column_config.TextColumn("Dimensions"),
                     "notes": st.column_config.TextColumn("Engineering Notes", width="large"),
                     "price_egp": st.column_config.NumberColumn("Cost (EGP)", format="EGP %.0f"),
@@ -157,7 +189,7 @@ def render_catalogs_tab():
                 column_config={
                     "Model": st.column_config.TextColumn("Airframe Model", width="medium"),
                     "wheelbase_mm": st.column_config.NumberColumn("Wheelbase", format="%d mm"),
-                    "weight_g": st.column_config.NumberColumn("Bare Weight", format="%.1f g"),
+                    "weight": st.column_config.NumberColumn("Bare Weight", format="%.1f g"),
                     "payload_limit_g": st.column_config.NumberColumn("Max Structural Payload", format="%.1f g"),
                     "motor_count": st.column_config.NumberColumn("Motors", format="%d"),
                     "max_prop": st.column_config.TextColumn("Max Prop Size"),

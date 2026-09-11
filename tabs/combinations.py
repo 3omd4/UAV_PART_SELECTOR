@@ -261,7 +261,7 @@ def render_combinations_tab():
 
     st.divider()
 
-    if st.button("🚀 Execute Combinatorial Solver", type="primary", use_container_width=True):
+    if st.button("🚀 Execute Combinatorial Solver", type="primary", width="stretch"):
         if not all([FRAMES, MOTORS, BATTERIES]):
             st.error("Incomplete database. Ensure Frames, Motors, and Batteries exist.")
             return
